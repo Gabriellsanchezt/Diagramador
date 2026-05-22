@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>DIAGRAMAS RED - BERILION</title>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        :root {
+            --primary: #1e3a8a;          /* Azul Marino */
+            --primary-hover: #172554;    /* Azul Oscuro */
+            --success: #0f766e;          /* Verde Teja / Esmeralda Opaco */
+            --success-hover: #115e59;    /* Verde Tenue */
+            --danger: #991b1b;           /* Rojo Vino / Borgoña */
+            --danger-hover: #7f1d1d;     /* Rojo Ladrillo  */
+            --warning: #d97706;          /* Ámbar */
+            --warning-hover: #b45309;    
+            --background: #f1f5f9;       /* Gris Platino */
+            --card-bg: #ffffff;
+            --text-main: #0f172a;        /* Grafito */
+            --text-muted: #475569;       /* Gris */
+            --border: #cbd5e1;           /* Borde */
+            --form-bg: #f8fafc;
+            --table-th: #f8fafc;
+        }
+
+        /* PALETA PARA MODO OSCURO */
+        body.dark-mode {
+            --background: #0f172a;       /* Grafito Oscuro */
+            --card-bg: #1e293b;          /* Gris Azulado Oscuro */
+            --text-main: #f8fafc;        /* Blanco Humo */
+            --text-muted: #94a3b8;       /* Gris Claro */
+            --border: #334155;           /* Borde Oscuro */
+            --form-bg: #151f32;          /* Fondo de formulario interno */
+            --table-th: #1e293b;
+            --primary: #3b82f6;          /* Azul más brillante para contraste */
+            --primary-hover: #2563eb;
+        }
+
+        body { 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 30px 20px; 
+            background-color: var(--background); 
+            color: var(--text-main); 
+        }
+
+        .container { 
+            max-width: 1000px; 
+            margin: 0 auto; 
+            background: var(--card-bg); 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgb(15 23 42 / 0.08); 
+        }
+
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--primary); 
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+
+        h1 { margin: 0; font-size: 24px; color: var(--primary); font-weight: 700; letter-spacing: -0.5px; }
+        p.subtitle { color: var(--text-muted); margin: 5px 0 0 0; font-size: 14px; }
+
+        .btn { 
+            padding: 10px 16px; 
+            border: none; 
+            border-radius: 4px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-transform: uppercase; 
+            letter-spacing: 0.5px;
+        }
+        
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-success { background: var(--success); color: white; font-size: 14px; width: 100%; justify-content: center; margin-top: 20px; padding: 12px; }
+        .btn-success:hover { background: var(--success-hover); }
+        .btn-warning { background: var(--warning); color: white; padding: 6px 12px; font-size: 11px; border-radius: 4px; }
+        .btn-warning:hover { background: var(--warning-hover); }
+        .btn-danger { background: var(--danger); color: white; padding: 6px 12px; font-size: 11px; border-radius: 4px; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-pdf { background: #334155; color: white; font-size: 12px; margin-top: 15px; } 
+        .btn-pdf:hover { background: #1e293b; }
+        .btn-help { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+        .btn-help:hover { background: #e2e8f0; color: var(--text-main); }
+        
+        .btn-backup { background: #475569; color: white; }
+        .btn-backup:hover { background: #334155; }
+
+        .form-row { 
+            display: flex; 
+            flex-wrap: wrap; 
+            gap: 16px; 
+            margin-bottom: 20px; 
+            background: var(--form-bg); 
+            border: 1px solid var(--border); 
+            border-radius: 6px; 
+            align-items: flex-end;
+            padding: 20px;
+        }
+
+        .backup-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding: 12px 20px;
+            background: var(--form-bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            align-items: center;
+        }
+
+        .form-group { flex: 1; min-width: 180px; display: flex; flex-direction: column; }
+        label { margin-bottom: 6px; font-weight: 700; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        select, input { padding: 9px 12px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; background: white; color: var(--text-main); outline: none; height: 40px; box-sizing: border-box; }
+        select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15); }
+
+        body.dark-mode select, body.dark-mode input {
+            background-color: #1e293b;
+        }
+
+        /* BUSCADOR CUSTOM DESPLEGABLE */
+        .custom-select-container { position: relative; width: 100%; }
+        .custom-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 999;
+            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.1);
+            display: none;
+            box-sizing: border-box;
+        }
+        body.dark-mode .custom-select-dropdown {
+            background: #1e293b;
+        }
+        .custom-select-option {
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-main);
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .custom-select-option:last-child { border-bottom: none; }
+        .custom-select-option:hover { background-color: var(--background); }
+        body.dark-mode .custom-select-option:hover { background-color: #334155; }
+        .custom-select-option.no-results { color: var(--text-muted); cursor: default; background: none; }
+
+        .action-buttons-group { display: flex; gap: 8px; }
+        .table-actions { display: flex; gap: 6px; }
+
+        h2 { font-size: 16px; margin: 0 0 15px 0; font-weight: 700; text-transform: uppercase; color: var(--primary); letter-spacing: 0.5px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 14px; }
+        th { background-color: var(--table-th); color: var(--primary); font-weight: 700; font-size: 12px; text-transform: uppercase; }
+        tr:hover td { background-color: #f1f5f9; }
+        body.dark-mode tr:hover td { background-color: #243249; }
+
+        .diagram-container { 
+            margin-top: 35px; 
+            border-top: 2px dashed var(--border); 
+            padding-top: 25px; 
+        }
+        
+        .diagram-header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #network-diagram {
+            width: 100%;
+            height: 550px;
+            background-color: #ffffff; 
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+        body.dark-mode #network-diagram {
+            background-color: #151f32;
+        }
+
+        .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+        .modal-content { background-color: white; padding: 30px; border-radius: 8px; max-width: 550px; width: 90%; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1); position: relative; }
+        body.dark-mode .modal-content { background-color: #1e293b; }
+        .close-btn { position: absolute; top: 15px; right: 20px; font-size: 24px; cursor: pointer; color: var(--text-muted); }
+        .close-btn:hover { color: var(--text-main); }
+        .modal h3 { margin-top: 0; font-size: 16px; border-bottom: 2px solid var(--primary); padding-bottom: 10px; text-transform: uppercase; color: var(--primary); }
+        .modal ol { padding-left: 20px; margin-bottom: 0; }
+        .modal li { margin-bottom: 12px; font-size: 14px; line-height: 1.5; color: var(--text-main); }
+
+        #popover-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .popover-alert {
+            min-width: 300px;
+            max-width: 400px;
+            padding: 14px 18px;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            transform: translateX(120%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .popover-alert.show { transform: translateX(0); }
+        .popover-alert.success { background-color: var(--success); border-left: 5px solid #064e3b; }
+        .popover-alert.warning { background-color: var(--warning); border-left: 5px solid #78350f; }
+        .popover-alert.danger { background-color: var(--danger); border-left: 5px solid #4c0519; }
+        
+        .popover-close {
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0.7;
+            background: none;
+            border: none;
+            color: white;
+            padding: 0;
+        }
+        .popover-close:hover { opacity: 1; }
+
+        hr.divider { border: 0; height: 1px; background: var(--border); margin: 25px 0; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #diagramSection, #diagramSection * { visibility: visible; }
+            #diagramSection { position: absolute; left: 0; top: 0; width: 100% !important; }
+            #network-diagram { width: 100% !important; height: 600px !important; border: none; }
+            .btn-pdf, #popover-container, #btnDarkMode { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="popover-container"></div>
+
+<div class="container">
+    <div class="header-area">
+        <div>
+            <h1>Estructurador de Red por Sedes</h1>
+            <p class="subtitle">Gestión automatizada de capacidad y distribución física de puertos por equipo</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-help" id="btnDarkMode" onclick="toggleDarkMode()">Modo Oscuro</button>
+            <button class="btn btn-help" onclick="abrirAyuda()">Instrucciones de Uso</button>
+        </div>
+    </div>
+    
+    <div class="backup-row">
+        <span style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-right: auto;">Gestión de Respaldos:</span>
+        <button type="button" class="btn btn-backup" onclick="exportarEstructuraRed()">Exportar Datos</button>
+        
+        <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importarEstructuraRed(this)">
+        <button type="button" class="btn btn-backup" onclick="document.getElementById('importFileInput').click()">Importar Datos</button>
+    </div>
+
+    <div class="backup-row" style="display: block; padding: 20px;">
+        <div class="custom-select-container">
+            <label for="sedeActual" style="color: var(--text-main); font-weight: 700; display: block; margin-bottom: 6px;">Sede / Empresa:</label>
+            <input type="text" id="sedeActual" placeholder="Haga clic aquí para buscar y seleccionar la sede..." style="width: 100%; height: 42px; font-weight: 600;" autocomplete="off" onfocus="abrirDropdownSedes()" oninput="filtrarSedes()">
+            
+            <div id="dropdownSedes" class="custom-select-dropdown"></div>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group">
+            <label for="nodeType">Equipo:</label>
+            <select id="nodeType" onchange="toggleInputsPorTipo()">
+                <option value="Router">Router</option>
+                <option value="Deco">Deco</option>
+                <option value="Repetidor">Repetidor</option>
+                <option value="Switch Rack (16p)">Switch Rack (16p)</option>
+                <option value="Switch Rack (24p)">Switch Rack (24p)</option>
+                <option value="Switch Puesto (5p)">Switch Puesto (5p)</option>
+                <option value="Switch Puesto (8p)">Switch Puesto (8p)</option>
+                <option value="Servidor">Servidor</option>
+                <option value="DVR">DVR / NVR</option>
+                <option value="Interbancario">Interbancario</option>
+                <option value="Biométrico">Biométrico</option>
+                <option value="Impresora">Impresora</option>
+                <option value="PC">Estación de Trabajo</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="nodeParent">¿De qué equipo depende?:</label>
+            <select id="nodeParent" onchange="actualizarPuertosDisponibles()">
+                <option value="">Nodo Principal</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="groupModel">
+            <label for="nodeModel" id="labelModel">Modelo:</label>
+            <div style="display: flex; gap: 6px; width: 100%;">
+                <select id="nodeModel" style="width: 100%;"></select>
+                <button type="button" id="btnAnexarModelo" class="btn btn-primary" style="height: 40px; padding: 0 14px; font-size: 18px; display: none;" onclick="anexarModeloPersonalizado()" title="Anexar item personalizado">+</button>
+            </div>
+        </div>
+
+        <div class="form-group" id="groupGeneration" style="display: none;">
+            <label for="nodeGeneration">Generación:</label>
+            <select id="nodeGeneration">
+                <option value="">Desconocida / N/A</option>
+                <option value="1ra Gen">1ra Gen</option>
+                <option value="2da Gen">2da Gen</option>
+                <option value="3ra Gen">3ra Gen</option>
+                <option value="4ta Gen">4ta Gen</option>
+                <option value="5ta Gen">5ta Gen</option>
+                <option value="6ta Gen">6ta Gen</option>
+                <option value="7ma Gen">7ma Gen</option>
+                <option value="8va Gen">8va Gen</option>
+                <option value="9na Gen">9na Gen</option>
+                <option value="10ma Gen">10ma Gen</option>
+                <option value="11va Gen">11va Gen</option>
+                <option value="12va Gen">12va Gen</option>
+                <option value="13va Gen">13va Gen</option>
+                <option value="14va Gen">14va Gen</option>
+            </select>
+        </div>
+
+        <div class="form-group" id="groupPorts" style="display: none;">
+            <label for="nodePorts">Cantidad de Puertos Usados:</label>
+            <select id="nodePorts"></select>
+        </div>
+
+        <div class="form-group" id="groupSpeed">
+            <label for="nodeSpeed">Velocidad:</label>
+            <select id="nodeSpeed">
+                <option value="Gigabit (1000 Mbps)">Gigabit (1000 Mbps)</option>
+                <option value="Megabit (100 Mbps)">Megabit (100 Mbps)</option>
+            </select>
+        </div>
+
+        <div class="action-buttons-group" id="formActionsContainer">
+            <button type="button" class="btn btn-primary" style="height: 40px;" id="btnSubmitForm" onclick="agregarNodo()">Agregar</button>
+        </div>
+    </div>
+
+    <hr class="divider">
+
+    <h2>Equipos en esta Sede</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Equipo</th>
+                <th>Identificador / Atributo</th>
+                <th>Detalle / Puertos</th>
+                <th>Depende De</th>
+                <th style="width: 150px;">Acción</th>
+            </tr>
+        </thead>
+        <tbody id="tablaNodos">
+            <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No hay equipos agregados en esta sede todavía.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <button class="btn btn-success" onclick="generarYEnfocarDiagrama()">Generar Diagrama en Pantalla</button>
+
+    <div class="diagram-container" id="diagramSection" style="display:none;">
+        <div class="diagram-header-actions">
+            <div>
+                <h2>Topología de Red Generada</h2>
+                <p class="subtitle">Estructura jerárquica limpia con representación icónica por dispositivo.</p>
+            </div>
+            <button class="btn btn-pdf" onclick="exportarAPDF()">Descargar Diagrama en PDF</button>
+        </div>
+        <div id="network-diagram"></div>
+    </div>
+    
+    <p style="text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 30px; border-top: 1px solid var(--border); padding-top: 15px;">
+        &copy; 2026 Berilion J-508195619. Todos los derechos reservados.
+    </p>
+</div>
+
+<div id="helpModal" class="modal" onclick="if(event.target.id === 'helpModal') cerrarAyuda()">
+    <div class="modal-content">
+        <span class="close-btn" onclick="cerrarAyuda()">&times;</span>
+        <h3>Guía de Operación del Sistema</h3>
+        <ol>
+            <li><strong>Sede bajo Evaluación:</strong> Al hacer clic en el campo, se desplegará una lista estructurada. Al escribir, se aplicará un filtro en tiempo real.</li>
+            <li><strong>Gestión de Respaldos (Superior):</strong> Use el botón "Exportar Datos" para descargar la configuración actual en un archivo `.json`.</li>
+            <li><strong>Registro de Equipos Base:</strong> Seleccione el tipo de dispositivo en el formulario. Los campos y listas comunes de marcas/modelos se cargarán automáticamente según su elección.</li>
+            <li><strong>Dependencias Jerárquicas:</strong> Indique explícitamente de qué equipo se alimenta el nuevo dispositivo.</li>
+            <li><strong>Cálculo Automático de Puertos:</strong> Al agregar una PC, el sistema restará de manera estricta los puertos consumidos de las ranuras físicas disponibles del dispositivo padre.</li>
+        </ol>
+    </div>
+</div>
+
+<script>
+    //DICCIONARIOO DE LAS SEDES
+    const sedesDisponibles = [
+        "CONSORCIO FARMACIAS SAN IGNACIO (CONSORCIO)", "FARMACIA LA MILAGROSA 2019, C.A. (GC)", "FSI BISCUCUY, C.A. (AJ)",
+        "FARMAIGNACIO EL SISAL, C.A. (AJ)", "FARMACIA SAN IGNACIO DE EL TOCUYO, C.A. (AJ)", "FARMACIA SAN IGNACIO LA 20, C.A. (AJ)",
+        "FARMACIA SAN IGNACIO EL TOCUYO, C.A. (AJ)", "FARMAIGNACIO ANDRES BELLO, C.A. (AJ)", "FARMA MERCADO, C.A. (AJ)",
+        "FARMACIA GUARICO FSI, C.A (AJ)", "FARMACIA LA PICA, C.A. (ANE)", "FARMACIA EL ROSARIO, C.A. (ANE)",
+        "FARMACIA SAN MIGUEL DE CARORA, C.A. (ANE)", "FARMACIA FARMAMARKET, C.A. (GR)", "FARMACIA PTO CABELLO, C.A. (GR)",
+        "FARMACIA CARORA LA 14, C.A. (GR)", "FARMACIA MIGUEL NIEVES, C.A (GR)", "FARMAIGNACIO BARARIDA, C.A. (JT)",
+        "FARMAIGNACIO BARARIDA, C.A. (SUCURSAL) (JT)", "FARMAIGNACIO MIGUEL ANGEL, C.A. (JT)", "FARMACIA ALTAGRACIA 20, C.A. (JT)",
+        "FARMAIGNACIO LA LARA, C.A. (JT)", "FARMACIA SAN VALENTIN EL BOLIVAR, C.A. (JT)", "FARMACIA BARRIO UNION, C.A. (JT)",
+        "FARMACIA LA ORQUIDEA, C.A. (JT)", "FARMACIA LA 50, C.A. (JT)", "FARMAIGNACIO CENTRO, C.A. (JT)",
+        "FARMAIGNACIO LA 19, C.A. (JT)", "FARMACIA LA 33 FT, C.A. (JT)", "FARMAIGNACIO MORAN, C.A. (JT)",
+        "FARMACIA YUDIBETH, C.A. (JT)", "FARMACIA LOS CERRAJONES F.T, C.A (JT)", "FARMACIA SAN IGNACIO LA 25 F.T, C.A (JT)",
+        "FARMACIA MEGA CENTER, C.A. (JT)", "FARMACIA CARLOS PÉREZ, C.A. (JT)", "FARMACIA SAN JUDAS OESTE, C.A. (JT)",
+        "FARMACIA CHE GABRIEL DE CERRITOS BLANCO, C.A. (JT)", "FARMACIA GUANARE, C.A. (JT)", "FARMACIA FARMILY, C.A. (JT)",
+        "FARMACIA ALIANZA 2020, C.A. (JT)", "FARMACIA EL ESFUERZO, C.A. (JT)", "FARMACIA FARMAIGNACIO ESTE, C.A. (JT)",
+        "FARMACIA ANGELY, C.A. (JT)", "FARMACIA SANTA ISABEL DEL OESTE, C.A. (JT)", "FARMACIA SAN IGNACIO 2021, C.A. (JT)",
+        "FARMACIA LA 5TA AVENIDA, C.A. (JT)", "FARMACIA NUEVA ALIANZA H&G C.A. (JT)", "FARMACIA LA VICTORIA 2023 WPM, C.A (JT)",
+        "FARMACIA DIVINA PASTORA WPM C.A (JT)", "FARMACIA GUACARA WPM C.A (JT)", "FARMAIGNACIO LA SALUD, C.A. (JT)",
+        "FARMAIGNACIO CAMORUCO, C.A. (JT)", "FARMAIGNACIO TINAQUILLO, C.A. (JT)", "FARMAIGNACIO NAGUANAGUA, C.A. (JT)",
+        "FARMAIGNACIO SAN CARLOS, C.A. (JT)", "FARMAIGNACIO BEATRIZ TRISTANCHO C.A (JT)", "FARMAIGNACIO SAN JOAQUIN, C.A (JT)",
+        "FARMACIA VERASI, C.A. (JT)", "FARMACIA SAN VALENTIN ACARIGUA CENTRO C.A (JT)", "FARMACIA FARMA-MARKET 2011, C.A. (AE)",
+        "FARMACIA EL RECREO, C.A. (AE)", "FARMAIGNACIO LA 12, C.A. (AE)", "FARMACIA LA 37, C.A. (AE)",
+        "FARMACIA LA 19, C.A. (AE)", "FARMACIA LA CHINITA DE LARA, C.A. (AE)", "MULTIFARMA 07, C.A. (AE)",
+        "SUPERFARMA PORTUGUESA, C.A (AE)", "SUPERFARMA SANARE, C.A. (AE)", "SUPERFARMA LA FLORESTA, C.A. (AE)",
+        "FARMACIA PRINCIPAL PIRITU, C.A. (AE)", "FARMACIA EL SAMAN DE TUREN, C.A. (AE)", "FARMACIA METROPOLIS DE LARA C.A. (AE)",
+        "FARMACIA SAN VALENTIN CABUDARE CENTRO C.A (AE)", "FARMACIA SAN VALENTIN PAVIA, C.A. (AE)", "FARMACIA SAN VALENTIN FLORENCIO JIMÉNEZ, C.A. (AE)",
+        "FARMACIA SAN VALENTIN EL OESTE, C.A. (AE)", "FARMACIA SAN IGNACIO DE LOYOLA II, C.A. (AE)", "FARMACIA LAS MERCEDES DE CABUDARE, C.A (AE)",
+        "FARMACIA NUEVA SEGOVIA DE BQTO, C.A (AE)", "FARMACIA LA 55 DE BQTO, C.A (AE)", "FARMACIA SAN IGNACIO DE CHIVACOA, C.A. (AE)",
+        "AMI DISTRIBUIDORA Y COMERCIALIZADORA, C.A (AE)", "FARMACIA SAN IGNACIO, C.A. (AE)", "FARMACIA DEL NORTE, C.A. (AE)",
+        "MEDIENTREGRAS"
+    ];
+
+    // DICCIONARIOS DE LISTAS PREDETERMINADAS CONTROLADAS
+    let procesadoresPredeterminados = ["Intel Core i3", "Intel Core i5", "Intel Core i7", "Intel Core i9"];
+    let routersPredeterminados = ["MikroTik", "ASUS", "Tenda", "Cisco", "Ubiquiti", "TP-Link"];
+    let impresorasPredeterminados = ["HP LaserJet Pro", "Epson", "Canon", "RICOH"];
+
+    let nodos = [];
+    let network = null;
+    let nodoEnEdicionId = null;
+
+    window.onload = function() {
+        construirDropdownSedes(sedesDisponibles);
+        toggleInputsPorTipo();
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.custom-select-container')) cerrarDropdownSedes();
+        });
+    };
+
+    function toggleDarkMode() {
+        const body = document.body;
+        const btn = document.getElementById('btnDarkMode');
+        body.classList.toggle('dark-mode');
+        btn.innerHTML = body.classList.contains('dark-mode') ? "Modo Claro" : "Modo Oscuro";
+        mostrarAlert("Modo de visualización cambiado", "success");
+        if (document.getElementById('diagramSection').style.display === 'block') generarYEnfocarDiagrama();
+    }
+
+    function construirDropdownSedes(lista) {
+        const dropdown = document.getElementById('dropdownSedes');
+        dropdown.innerHTML = '';
+        if (lista.length === 0) {
+            dropdown.innerHTML = '<div class="custom-select-option no-results">No se encontraron sedes coincidentes</div>';
+            return;
+        }
+        lista.forEach(sede => {
+            const opcion = document.createElement('div');
+            opcion.className = 'custom-select-option';
+            opcion.innerText = sede;
+            opcion.onclick = function() {
+                document.getElementById('sedeActual').value = sede;
+                cerrarDropdownSedes();
+            };
+            dropdown.appendChild(opcion);
+        });
+    }
+
+    function abrirDropdownSedes() {
+        document.getElementById('dropdownSedes').style.display = 'block';
+        filtrarSedes();
+    }
+    function cerrarDropdownSedes() { document.getElementById('dropdownSedes').style.display = 'none'; }
+    function filtrarSedes() {
+        const textoBusqueda = document.getElementById('sedeActual').value.toLowerCase();
+        const filtradas = sedesDisponibles.filter(sede => sede.toLowerCase().includes(textoBusqueda));
+        construirDropdownSedes(filtradas);
+    }
+
+    function exportarEstructuraRed() {
+        const nombreSedeSeleccionada = document.getElementById('sedeActual').value.trim();
+        if (!nombreSedeSeleccionada) {
+            mostrarAlert("Por favor, seleccione una Sede antes de exportar.", "warning");
+            return;
+        }
+        if (nodos.length === 0) {
+            mostrarAlert("No hay equipos registrados para exportar.", "warning");
+            return;
+        }
+        const paqueteExportacion = { sede: nombreSedeSeleccionada, equipos: nodos };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(paqueteExportacion, null, 2));
+        const downloadAnchor = document.createElement('a');
+        const nombreSedeLimpio = nombreSedeSeleccionada.replace(/[\s,.]+/g, '_');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `red_${nombreSedeLimpio}_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        mostrarAlert("Estructura de red exportada exitosamente.", "success");
+    }
+
+    function importarEstructuraRed(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const dataImportada = JSON.parse(e.target.result);
+                if (dataImportada && Array.isArray(dataImportada.equipos)) {
+                    nodos = dataImportada.equipos;
+                    document.getElementById('sedeActual').value = dataImportada.sede || "";
+                } else if (Array.isArray(dataImportada)) {
+                    nodos = dataImportada;
+                    document.getElementById('sedeActual').value = "";
+                } else {
+                    mostrarAlert("El formato del archivo no es válido.", "danger");
+                    return;
+                }
+                limpiarFormulario();
+                document.getElementById('diagramSection').style.display = 'none';
+                if(network) { network.destroy(); network = null; }
+                mostrarAlert(`Cargados eficientemente ${nodos.length} dispositivos.`, "success");
+            } catch (err) {
+                mostrarAlert("Error crítico al procesar el archivo JSON.", "danger");
+            }
+            input.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    function mostrarAlert(mensaje, tipo = "success") {
+        const container = document.getElementById("popover-container");
+        const popover = document.createElement("div");
+        popover.className = `popover-alert ${tipo}`;
+        popover.innerHTML = `<span>${mensaje}</span><button class="popover-close" onclick="this.parentElement.remove()">&times;</button>`;
+        container.appendChild(popover);
+        setTimeout(() => popover.classList.add("show"), 10);
+        setTimeout(() => {
+            popover.classList.remove("show");
+            setTimeout(() => popover.remove(), 300);
+        }, 4000);
+    }
+
+    function abrirAyuda() { document.getElementById('helpModal').style.display = 'flex'; }
+    function cerrarAyuda() { document.getElementById('helpModal').style.display = 'none'; }
+    
+    function requiereMedicionVelocidad(type) { 
+        return type === "Router" || type.includes("Switch") || type === "Deco" || type === "Repetidor"; 
+    }
+
+    // FUNCIÓN DE ANEXO COMPARTIDA Y ADAPTADA SEGÚN EL TIPO DE DISPOSITIVO SELECTOR
+    function anexarModeloPersonalizado() {
+        const type = document.getElementById('nodeType').value;
+        let mensajePrompt = "Ingrese el nombre del nuevo modelo:";
+        let listaDestino = null;
+
+        if (type === "Servidor") { mensajePrompt = "Ingrese el procesador personalizado (Ej: AMD EPYC):"; listaDestino = procesadoresPredeterminados; }
+        else if (type === "Router") { mensajePrompt = "Ingrese el modelo de Router personalizado:"; listaDestino = routersPredeterminados; }
+        else if (type === "Impresora") { mensajePrompt = "Ingrese el modelo de Impresora personalizado:"; listaDestino = impresorasPredeterminados; }
+
+        const nuevoItem = prompt(mensajePrompt);
+        if (nuevoItem && nuevoItem.trim() !== "") {
+            const limpio = nuevoItem.trim();
+            if (listaDestino && !listaDestino.includes(limpio)) {
+                listaDestino.push(limpio);
+            }
+            cargarOpcionesDesplegableModelo(listaDestino, limpio);
+            mostrarAlert(`"${limpio}" anexado a la lista temporal correctamente.`, "success");
+        }
+    }
+
+    function cargarOpcionesDesplegableModelo(listaDatos, seleccionarValor = null) {
+        const selectModel = document.getElementById('nodeModel');
+        selectModel.innerHTML = "";
+        listaDatos.forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item;
+            opt.innerText = item;
+            if (seleccionarValor && item === seleccionarValor) opt.selected = true;
+            selectModel.appendChild(opt);
+        });
+    }
+
+    // CONTROL CENTRALIZADO DE INPUTS SEGÚN EL TIPO SELECCIONADO
+    function toggleInputsPorTipo() {
+        const type = document.getElementById('nodeType').value;
+        const groupModel = document.getElementById('groupModel');
+        const groupGeneration = document.getElementById('groupGeneration');
+        const groupPorts = document.getElementById('groupPorts');
+        const groupSpeed = document.getElementById('groupSpeed');
+        const labelModel = document.getElementById('labelModel');
+        const elementModel = document.getElementById('nodeModel');
+        const btnAnexar = document.getElementById('btnAnexarModelo');
+
+        if (type === "PC") {
+            groupModel.style.display = "none";
+            groupGeneration.style.display = "none";
+            groupPorts.style.display = "flex";
+            groupSpeed.style.display = "none";
+            btnAnexar.style.display = "none";
+            actualizarPuertosDisponibles();
+        } else {
+            groupModel.style.display = "flex";
+            groupPorts.style.display = "none";
+
+            // Evaluamos si el tipo requiere una lista controlada con botón anexar (+)
+            const usaListaEstructurada = (type === "Servidor" || type === "Router" || type === "Impresora");
+
+            if (usaListaEstructurada) {
+                btnAnexar.style.display = "block";
+                
+                if (type === "Servidor") {
+                    labelModel.innerText = "Procesador:";
+                    groupGeneration.style.display = "flex";
+                } else {
+                    labelModel.innerText = "Modelo:";
+                    groupGeneration.style.display = "none";
+                }
+
+                // Forzar que el elemento del DOM sea un SELECT de manera limpia
+                if (elementModel.tagName === "INPUT") {
+                    const nuevoSelect = document.createElement('select');
+                    nuevoSelect.id = "nodeModel";
+                    nuevoSelect.style.width = "100%";
+                    elementModel.parentNode.replaceChild(nuevoSelect, elementModel);
+                }
+
+                // Cargar los datos correspondientes en el select
+                if (type === "Servidor") cargarOpcionesDesplegableModelo(procesadoresPredeterminados);
+                if (type === "Router") cargarOpcionesDesplegableModelo(routersPredeterminados);
+                if (type === "Impresora") cargarOpcionesDesplegableModelo(impresorasPredeterminados);
+
+            } else {
+                // Para los demás equipos que no usan listas predeterminadas, mantenemos un INPUT abierto convencional
+                labelModel.innerText = "Modelo:";
+                btnAnexar.style.display = "none";
+                groupGeneration.style.display = "none";
+
+                if (elementModel.tagName === "SELECT") {
+                    const nuevoInput = document.createElement('input');
+                    nuevoInput.type = "text";
+                    nuevoInput.id = "nodeModel";
+                    nuevoInput.style.width = "100%";
+                    elementModel.parentNode.replaceChild(nuevoInput, elementModel);
+                }
+                document.getElementById('nodeModel').placeholder = "TP-LINK, Cisco, Genérico, etc.";
+            }
+
+            if (requiereMedicionVelocidad(type)) groupSpeed.style.display = "flex";
+            else groupSpeed.style.display = "none";
+        }
+    }
+
+    function actualizarPuertosDisponibles() {
+        const type = document.getElementById('nodeType').value;
+        if (type !== "PC") return;
+
+        const parentSelect = document.getElementById('nodeParent');
+        const portsSelect = document.getElementById('nodePorts');
+        const parentId = parentSelect.value;
+
+        if (!parentId) {
+            portsSelect.innerHTML = `<option value="">Seleccione un padre válido</option>`;
+            return;
+        }
+
+        let maxPuertosPadre = 0; 
+        const padreReal = nodos.find(n => n.id === parentId);
+        
+        if (padreReal) {
+            if (padreReal.type.includes("24p")) maxPuertosPadre = 24;
+            else if (padreReal.type.includes("16p")) maxPuertosPadre = 16;
+            else if (padreReal.type.includes("8p")) maxPuertosPadre = 8;
+            else if (padreReal.type.includes("5p")) maxPuertosPadre = 5;
+            else if (padreReal.type === "Deco" || padreReal.type === "Router" || padreReal.type === "Repetidor") maxPuertosPadre = 4; 
+        }
+
+        let puertosOcupados = 0;
+        nodos.forEach(n => {
+            if (n.parentModel === parentId && n.type === "PC" && n.id !== nodoEnEdicionId) {
+                const consumidos = parseInt(n.speedOrPorts.replace('Puertos ocupados: ', '')) || 0;
+                puertosOcupados += consumidos;
+            }
+        });
+
+        let puertosDisponibles = maxPuertosPadre - puertosOcupados;
+        if (puertosDisponibles < 0) puertosDisponibles = 0;
+
+        portsSelect.innerHTML = "";
+        if (puertosDisponibles === 0) {
+            portsSelect.innerHTML = `<option value="0">¡Sin puertos libres!</option>`;
+        } else {
+            for (let i = 1; i <= puertosDisponibles; i++) {
+                portsSelect.innerHTML += `<option value="${i}">${i} ${i === 1 ? 'Puerto' : 'Puertos'}</option>`;
+            }
+        }
+    }
+
+    function agregarNodo() {
+        const type = document.getElementById('nodeType').value;
+        const parentId = document.getElementById('nodeParent').value;
+        const uniqueId = "node_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+        let modelOrCpu = "";
+        let speedOrPorts = "";
+
+        if (type === "PC") {
+            if (!parentId) {
+                mostrarAlert("Las Estaciones de Trabajo deben depender obligatoriamente de un equipo padre.", "warning");
+                return;
+            }
+            const puertos = document.getElementById('nodePorts').value;
+            if (puertos === "0" || !puertos) {
+                mostrarAlert("El equipo seleccionado no posee puertos físicos libres.", "danger");
+                return;
+            }
+            modelOrCpu = "N/A";
+            speedOrPorts = `Puertos ocupados: ${puertos}`;
+        } else {
+            modelOrCpu = document.getElementById('nodeModel').value;
+            if (modelOrCpu) modelOrCpu = modelOrCpu.trim();
+            
+            if (!modelOrCpu) {
+                mostrarAlert("Por favor, complete o seleccione el modelo del equipo.", "warning");
+                return;
+            }
+
+            if (type === "Servidor") {
+                const gen = document.getElementById('nodeGeneration').value;
+                if (gen) modelOrCpu = `${modelOrCpu} (${gen})`;
+            }
+
+            if (requiereMedicionVelocidad(type)) {
+                speedOrPorts = document.getElementById('nodeSpeed').value;
+            } else {
+                speedOrPorts = "Velocidad heredada";
+            }
+        }
+
+        nodos.push({
+            id: uniqueId,
+            model: modelOrCpu,
+            type: type,
+            speedOrPorts: speedOrPorts,
+            parentModel: parentId || null
+        });
+
+        mostrarAlert(`${type === 'PC' ? 'Estación de Trabajo' : type} añadido correctamente.`, "success");
+        limpiarFormulario();
+    }
+
+    function iniciarEdicion(id) {
+        const nodo = nodos.find(n => n.id === id);
+        if (!nodo) return;
+
+        nodoEnEdicionId = id;
+        document.getElementById('nodeType').value = nodo.type;
+        actualizarDropdownPadres(); 
+        document.getElementById('nodeParent').value = nodo.parentModel || "";
+        toggleInputsPorTipo();
+
+        if (nodo.type === "PC") {
+            const numPuertos = nodo.speedOrPorts.replace('Puertos ocupados: ', '');
+            document.getElementById('nodePorts').value = numPuertos;
+        } else {
+            if (nodo.type === "Servidor" || nodo.type === "Router" || nodo.type === "Impresora") {
+                let modeloALocalizar = nodo.model;
+                let listaReferencia = null;
+
+                if (nodo.type === "Servidor") {
+                    listaReferencia = procesadoresPredeterminados;
+                    const matchGen = nodo.model.match(/\(([^)]+)\)/);
+                    if (matchGen) {
+                        document.getElementById('nodeGeneration').value = matchGen[1];
+                        modeloALocalizar = nodo.model.replace(/\s\([^)]+\)/, "").trim();
+                    }
+                } else if (nodo.type === "Router") {
+                    listaReferencia = routersPredeterminados;
+                } else if (nodo.type === "Impresora") {
+                    listaReferencia = impresorasPredeterminados;
+                }
+
+                // Si fue un anexo personalizado guardado en el JSON, lo re-inyectamos en caliente a la lista temporal
+                if (listaReferencia && !listaReferencia.includes(modeloALocalizar)) {
+                    listaReferencia.push(modeloALocalizar);
+                }
+
+                cargarOpcionesDesplegableModelo(listaReferencia, modeloALocalizar);
+            } else {
+                document.getElementById('nodeModel').value = nodo.model;
+            }
+            
+            if (requiereMedicionVelocidad(nodo.type)) {
+                document.getElementById('nodeSpeed').value = nodo.speedOrPorts;
+            }
+        }
+
+        const contenedorAcciones = document.getElementById('formActionsContainer');
+        contenedorAcciones.innerHTML = `
+            <button type="button" class="btn btn-warning" style="height: 40px;" onclick="guardarCambiosNodo()">Guardar</button>
+            <button type="button" class="btn btn-help" style="height: 40px; background: #e2e8f0;" onclick="limpiarFormulario()">Cancelar</button>
+        `;
+    }
+
+    function guardarCambiosNodo() {
+        const nodo = nodos.find(n => n.id === nodoEnEdicionId);
+        if (!nodo) return;
+
+        const type = document.getElementById('nodeType').value;
+        const parentId = document.getElementById('nodeParent').value;
+        let modelOrCpu = "";
+        let speedOrPorts = "";
+
+        if (parentId === nodo.id) {
+            mostrarAlert("Un equipo no puede depender de sí mismo.", "danger");
+            return;
+        }
+
+        if (type === "PC") {
+            if (!parentId) {
+                mostrarAlert("Las Estaciones de Trabajo deben depender de un equipo padre.", "warning");
+                return;
+            }
+            const puertos = document.getElementById('nodePorts').value;
+            modelOrCpu = "N/A";
+            speedOrPorts = `Puertos ocupados: ${puertos}`;
+        } else {
+            modelOrCpu = document.getElementById('nodeModel').value;
+            if (modelOrCpu) modelOrCpu = modelOrCpu.trim();
+            
+            if (!modelOrCpu) {
+                mostrarAlert("Complete el campo de modelo.", "warning");
+                return;
+            }
+
+            if (type === "Servidor") {
+                const gen = document.getElementById('nodeGeneration').value;
+                if (gen) modelOrCpu = `${modelOrCpu} (${gen})`;
+            }
+
+            if (requiereMedicionVelocidad(type)) {
+                speedOrPorts = document.getElementById('nodeSpeed').value;
+            } else {
+                speedOrPorts = "Velocidad heredada";
+            }
+        }
+
+        nodo.type = type;
+        nodo.parentModel = parentId || null;
+        nodo.model = modelOrCpu;
+        nodo.speedOrPorts = speedOrPorts;
+
+        mostrarAlert("Cambios guardados con éxito.", "success");
+        limpiarFormulario();
+    }
+
+    function limpiarFormulario() {
+        nodoEnEdicionId = null;
+        document.getElementById('nodeType').value = "Router";
+        document.getElementById('nodeGeneration').value = "";
+        
+        const contenedorAcciones = document.getElementById('formActionsContainer');
+        contenedorAcciones.innerHTML = `<button type="button" class="btn btn-primary" style="height: 40px;" id="btnSubmitForm" onclick="agregarNodo()">Agregar</button>`;
+
+        actualizarTabla();
+        actualizarDropdownPadres();
+        toggleInputsPorTipo();
+        
+        const elementModel = document.getElementById('nodeModel');
+        if (elementModel.tagName === "INPUT") elementModel.value = '';
+    }
+
+    function eliminarNodo(id) {
+        if (nodoEnEdicionId === id) limpiarFormulario();
+        nodos = nodos.filter(n => n.id !== id);
+        nodos.forEach(n => {
+            if (n.parentModel === id) n.parentModel = null;
+        });
+        mostrarAlert(`Equipo eliminado de la sede.`, "warning");
+        actualizarTabla();
+        actualizarDropdownPadres();
+    }
+
+    function actualizarTabla() {
+        const tbody = document.getElementById('tablaNodos');
+        if (nodos.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">No hay equipos agregados en esta sede todavía.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = '';
+        nodos.forEach(n => {
+            let padreMostrar = '<span style="color: var(--text-muted);">Sede Principal (Raíz)</span>';
+            if (n.parentModel) {
+                const p = nodos.find(item => item.id === n.parentModel);
+                if (p) padreMostrar = p.type === "PC" ? "Estación de Trabajo" : `${p.type} (${p.model})`;
+            }
+
+            let detalleMostrar = n.speedOrPorts;
+            if (!requiereMedicionVelocidad(n.type) && n.type !== "PC") {
+                detalleMostrar = `<span style="color: var(--text-muted); font-style: italic;">Heredada</span>`;
+            }
+
+            let atributoMostrar = n.model;
+            if (n.type === "PC") atributoMostrar = `<span style="color: var(--text-muted); font-style: italic;">Sin Atributos</span>`;
+
+            tbody.innerHTML += `<tr>
+                <td><strong>${n.type === "Deco" ? "Deco / Repetidor" : n.type}</strong></td>
+                <td>${atributoMostrar}</td>
+                <td>${detalleMostrar}</td>
+                <td>${padreMostrar}</td>
+                <td>
+                    <div class="table-actions">
+                        <button class="btn btn-warning" onclick="iniciarEdicion('${n.id}')">Editar</button>
+                        <button class="btn btn-danger" onclick="eliminarNodo('${n.id}')">Eliminar</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+    }
+
+    function actualizarDropdownPadres() {
+        const select = document.getElementById('nodeParent');
+        select.innerHTML = '<option value="">Ninguno (Nodo Principal - Conecta a Sede)</option>';
+        nodos.forEach(n => {
+            if (n.type !== "PC" && n.id !== nodoEnEdicionId) {
+                const tipoBonito = n.type === "Deco" ? "Deco / Repetidor" : n.type;
+                select.innerHTML += `<option value="${n.id}">${tipoBonito} (${n.model})</option>`;
+            }
+        });
+        actualizarPuertosDisponibles();
+    }
+
+    function generarYEnfocarDiagrama() {
+        const nombreSede = document.getElementById('sedeActual').value.trim() || "SEDE EVALUADA (SIN NOMBRE)";
+        const esOscuro = document.body.classList.contains('dark-mode');
+        
+        if (nodos.length === 0) {
+            mostrarAlert("Agrega equipos primero para poder estructurar la topología.", "warning");
+            return;
+        }
+
+        document.getElementById('diagramSection').style.display = 'block';
+        const nodesArray = [];
+        const edgesArray = [];
+
+        const idRaizSede = "Sede_Root_Base";
+        nodesArray.push({
+            id: idRaizSede,
+            label: `<b>${nombreSede}</b>\n<i>Origen de Infraestructura</i>`,
+            shape: 'image',
+            image: "https://img.icons8.com/fluency/96/company.png",
+            size: 45,
+            font: { color: esOscuro ? '#60a5fa' : '#1e3a8a', size: 13, face: 'system-ui', multi: true, align: 'center', bold: true }
+        });
+
+        const iconRepo = {
+            "Router": "https://img.icons8.com/fluency/96/router.png",
+            "Switch Rack (24p)": "https://img.icons8.com/fluency/96/hub.png",
+            "Switch Rack (16p)": "https://img.icons8.com/fluency/96/hub.png",
+            "Switch Puesto (5p)": "https://img.icons8.com/fluency/96/switch.png",
+            "Switch Puesto (8p)": "https://img.icons8.com/fluency/96/switch.png",
+            "Deco": "https://img.icons8.com/fluency/96/wi-fi-router.png", 
+            "Repetidor": "https://img.icons8.com/fluency/96/repeater.png",
+            "Servidor": "https://img.icons8.com/fluency/96/server.png",
+            "DVR": "https://img.icons8.com/fluency/96/video-recorder.png",
+            "Interbancario": "https://img.icons8.com/fluency/96/bank.png",
+            "Biométrico": "https://img.icons8.com/fluency/96/fingerprint.png",
+            "Impresora": "https://img.icons8.com/fluency/96/printer.png",
+            "PC": "https://img.icons8.com/fluency/96/monitor.png"
+        };
+
+        nodos.forEach(n => {
+            let iconUrl = iconRepo[n.type] || "https://img.icons8.com/fluency/96/network.png";
+            if (n.type.includes("Switch Rack")) iconUrl = iconRepo["Switch Rack (24p)"];
+            if (n.type.includes("Switch Puesto")) iconUrl = iconRepo["Switch Puesto (5p)"];
+
+            let labelTexto = "";
+            const tipoEtiqueta = n.type === "Deco" ? "Deco / Repetidor" : n.type;
+
+            if (n.type === "PC") {
+                labelTexto = `<b>Estación de Trabajo</b>\n(${n.speedOrPorts.replace('Puertos ocupados: ', 'P:')})`;
+            } else if (n.type === "Servidor") {
+                labelTexto = `<b>${tipoEtiqueta}</b>\nProc: ${n.model}`;
+            } else if (requiereMedicionVelocidad(n.type)) {
+                labelTexto = `<b>${tipoEtiqueta}</b>\n${n.model}\n<i>${n.speedOrPorts.split(' ')[0]}</i>`;
+            } else {
+                labelTexto = `<b>${tipoEtiqueta}</b>\n${n.model}`;
+            }
+
+            nodesArray.push({
+                id: n.id,
+                label: labelTexto,
+                shape: 'image',
+                image: iconUrl,
+                size: 32,
+                font: { color: esOscuro ? '#f8fafc' : '#0f172a', size: 11, face: 'system-ui', multi: true, align: 'center' }
+            });
+
+            if (n.parentModel) {
+                edgesArray.push({
+                    from: n.parentModel,
+                    to: n.id,
+                    arrows: 'to',
+                    color: { color: esOscuro ? '#475569' : '#cbd5e1', highlight: '#1e3a8a' },
+                    width: 2
+                });
+            } else {
+                edgesArray.push({
+                    from: idRaizSede,
+                    to: n.id,
+                    arrows: 'to',
+                    color: { color: esOscuro ? '#64748b' : '#94a3b8', highlight: '#1e3a8a' },
+                    width: 2.5,
+                    dashes: true
+                });
+            }
+        });
+
+        const container = document.getElementById('network-diagram');
+        const data = { nodes: new vis.DataSet(nodesArray), edges: new vis.DataSet(edgesArray) };
+        const options = {
+            nodes: { borderWidth: 0, shadow: true },
+            edges: { smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.4 } },
+            layout: { hierarchical: { direction: 'UD', sortMethod: 'directed', nodeSpacing: 140, treeSpacing: 200 } },
+            physics: { hierarchicalRepulsion: { nodeDistance: 160 } }
+        };
+
+        if (network) network.destroy();
+        network = new vis.Network(container, data, options);
+        mostrarAlert(`Diagrama topológico generado con éxito.`, "success");
+    }
+
+    function exportarAPDF() { window.print(); }
+</script>
+</body>
+</html>
