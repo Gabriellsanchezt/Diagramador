@@ -6,24 +6,21 @@
     let network = null;
     let editId = null;
     let sedesCache = [];
+    let catalogoModelos = {};
+    let modelosFiltradosActuales = [];
 
     const iconRepo = {
         Router: 'https://img.icons8.com/fluency/96/router.png',
         Deco: 'https://img.icons8.com/fluency/96/wi-fi-router.png',
         Repetidor: 'https://img.icons8.com/fluency/96/repeater.png',
-        Switch_Acceso_16: 'https://img.icons8.com/fluency/96/hub.png',
-        Switch_Acceso_24: 'https://img.icons8.com/fluency/96/hub.png',
-        Switch_Distrib_16: 'https://img.icons8.com/fluency/96/hub.png',
-        Switch_Distrib_24: 'https://img.icons8.com/fluency/96/hub.png',
-        Switch_Nucleo_16: 'https://img.icons8.com/fluency/96/hub.png',
-        Switch_Puesto_5: 'https://img.icons8.com/fluency/96/switch.png',
-        Switch_Puesto_8: 'https://img.icons8.com/fluency/96/switch.png',
+        'Switch Rack (16p)': 'https://img.icons8.com/fluency/96/hub.png',
+        'Switch Rack (24p)': 'https://img.icons8.com/fluency/96/hub.png',
+        'Switch Puesto (5p)': 'https://img.icons8.com/fluency/96/switch.png',
+        'Switch Puesto (8p)': 'https://img.icons8.com/fluency/96/switch.png',
         Servidor: 'https://img.icons8.com/fluency/96/server.png',
         DVR: 'https://img.icons8.com/fluency/96/video-recorder.png',
-        Camara_IP: 'https://img.icons8.com/fluency/96/cctv.png',
-        Camara_Cableada: 'https://img.icons8.com/fluency/96/camera.png',
         Interbancario: 'https://img.icons8.com/fluency/96/bank.png',
-        Biometrico: 'https://img.icons8.com/fluency/96/fingerprint.png',
+        'Biométrico': 'https://img.icons8.com/fluency/96/fingerprint.png',
         Impresora: 'https://img.icons8.com/fluency/96/printer.png',
         PC: 'https://img.icons8.com/fluency/96/monitor.png'
     };
@@ -34,14 +31,83 @@
         return tiposEquipo.find(t => t.codigo === c);
     }
 
-    function capaFromTipo(codigo) {
-        if (codigo.includes('Distrib')) return 'distribucion';
-        if (codigo.includes('Nucleo')) return 'nucleo';
+    function capaFromTipo() {
         return 'acceso';
     }
 
     function requiereVelocidad(t) {
         return t && parseInt(t.requiere_velocidad, 10) === 1;
+    }
+
+    function tipoUsaPuertosPadre(t) {
+        return t && parseInt(t.requiere_puertos, 10) === 1;
+    }
+
+    function slug(texto) {
+        return String(texto || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-zA-Z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '')
+            .toLowerCase();
+    }
+
+    function escapeHtml(texto) {
+        return String(texto ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function prepararImpresionPdf() {
+        if (!sedeActual) {
+            return BerilionUI.alert('Seleccione una sede antes de exportar PDF', 'warning');
+        }
+        document.getElementById('printSedeNombre').textContent = sedeActual.nombre || 'Sede';
+        document.getElementById('printSedeRif').textContent = `RIF: ${sedeActual.rif || '—'}`;
+
+        const tituloOriginal = document.title;
+        const nombre = slug(sedeActual.nombre || 'sede');
+        const rif = slug(sedeActual.rif || 'sin_rif');
+        document.title = `topologia_${nombre}_${rif}`;
+        window.print();
+        setTimeout(() => {
+            document.title = tituloOriginal;
+        }, 600);
+    }
+
+    async function cargarCatalogoModelos() {
+        const r = await apiGet('modelos-equipo');
+        if (!r.ok) {
+            BerilionUI.alert(r.error || 'No se pudo cargar catálogo de modelos', 'warning');
+            catalogoModelos = {};
+            return;
+        }
+        const agrupado = {};
+        (r.data || []).forEach(row => {
+            if (!row.tipo_codigo || !row.nombre) return;
+            if (!Array.isArray(agrupado[row.tipo_codigo])) {
+                agrupado[row.tipo_codigo] = [];
+            }
+            agrupado[row.tipo_codigo].push(String(row.nombre).trim());
+        });
+        catalogoModelos = agrupado;
+    }
+
+    function getModelosPorTipo(tipoCodigo) {
+        const lista = Array.isArray(catalogoModelos[tipoCodigo]) ? catalogoModelos[tipoCodigo] : [];
+        return [...new Set(lista.map(x => String(x).trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    }
+
+    function registrarModeloEnCatalogo(tipoCodigo, modelo) {
+        if (!tipoCodigo || !modelo) return;
+        if (!Array.isArray(catalogoModelos[tipoCodigo])) {
+            catalogoModelos[tipoCodigo] = [];
+        }
+        if (!catalogoModelos[tipoCodigo].includes(modelo)) {
+            catalogoModelos[tipoCodigo].push(modelo);
+        }
     }
 
     document.getElementById('btnDarkModeNav').onclick = () => {
@@ -100,13 +166,20 @@
         btnToggleSidebar.setAttribute('aria-expanded', 'false');
     }
 
+    const panelesModelos = ['panel-catalogo-equipos', 'panel-catalogo-modelos'];
+
     function activarPanelSidebar(panelId) {
-        document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
+        document.querySelectorAll('.sidebar-menu-item').forEach(btn => {
             btn.classList.toggle('is-active', btn.dataset.panel === panelId);
         });
         document.querySelectorAll('.sidebar-panel').forEach(panel => {
             panel.classList.toggle('is-active', panel.id === panelId);
         });
+        const enCatalogo = panelesModelos.includes(panelId);
+        const grupoCatalogo = document.getElementById('sidebarMenuCatalogo');
+        const labelCatalogo = document.getElementById('sidebarNavModelos');
+        if (grupoCatalogo) grupoCatalogo.classList.toggle('is-expanded', enCatalogo);
+        if (labelCatalogo) labelCatalogo.classList.toggle('is-highlight', enCatalogo);
     }
 
     btnToggleSidebar.onclick = () => {
@@ -116,7 +189,7 @@
     document.getElementById('btnCloseSidebar').onclick = closeSidebar;
     sidebarOverlay.onclick = closeSidebar;
 
-    document.querySelectorAll('.sidebar-nav-btn').forEach(btn => {
+    document.querySelectorAll('.sidebar-menu-item').forEach(btn => {
         btn.onclick = () => activarPanelSidebar(btn.dataset.panel);
     });
 
@@ -128,14 +201,118 @@
         const t = await apiGet('tipos');
         if (!t.ok) return BerilionUI.alert('Error cargando tipos', 'danger');
         tiposEquipo = t.data;
-        const sel = document.getElementById('nodeType');
-        sel.innerHTML = tiposEquipo.map(x =>
-            `<option value="${x.codigo}">${x.etiqueta}</option>`
-        ).join('');
+        await cargarCatalogoModelos();
+        sincronizarTiposEquipoUI();
         await cargarSedes('');
         bindEvents();
         onTipoChange();
         prepararFormularioSede();
+        renderCatalogoEquipos();
+        renderCatalogoModelos();
+    }
+
+    function sincronizarTiposEquipoUI() {
+        const sel = document.getElementById('nodeType');
+        const prev = sel.value;
+        sel.innerHTML = tiposEquipo.map(x =>
+            `<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.etiqueta)}</option>`
+        ).join('');
+        if (prev && tiposEquipo.some(x => x.codigo === prev)) {
+            sel.value = prev;
+        }
+        const selTipoCatalogo = document.getElementById('catalogoTipoEquipo');
+        const prevCat = selTipoCatalogo.value;
+        selTipoCatalogo.innerHTML = tiposEquipo
+            .filter(x => !tipoUsaPuertosPadre(x))
+            .map(x => `<option value="${escapeHtml(x.codigo)}">${escapeHtml(x.etiqueta)}</option>`)
+            .join('');
+        if (prevCat && tiposEquipo.some(x => x.codigo === prevCat && !tipoUsaPuertosPadre(x))) {
+            selTipoCatalogo.value = prevCat;
+        }
+        renderCatalogoEquipos();
+        onTipoChange();
+    }
+
+    function renderCatalogoEquipos() {
+        const box = document.getElementById('catalogoEquiposLista');
+        if (!box) return;
+        if (!tiposEquipo.length) {
+            box.innerHTML = '<p class="sidebar-hint-box">No hay tipos de equipo registrados.</p>';
+            return;
+        }
+        box.innerHTML = tiposEquipo.map(t => {
+            const badges = [];
+            if (parseInt(t.requiere_ip, 10) === 1) badges.push('Requiere IP');
+            if (parseInt(t.es_switch, 10) === 1) {
+                badges.push(`Switch · ${t.puertos_max || '?'} puertos`);
+            }
+            if (parseInt(t.requiere_velocidad, 10) === 1) badges.push('Velocidad');
+            if (parseInt(t.requiere_puertos, 10) === 1) badges.push('Puertos en padre');
+            const quitar = t.codigo !== 'PC'
+                ? `<button type="button" class="btn btn-danger btn-sm" data-del-tipo="${escapeHtml(t.codigo)}">Quitar</button>`
+                : '';
+            return `<div class="catalogo-equipo-row">
+                <div class="catalogo-equipo-info">
+                    <strong>${escapeHtml(t.etiqueta)}</strong>
+                    <span class="catalogo-equipo-codigo">${escapeHtml(t.codigo)}</span>
+                    ${badges.length ? `<span class="catalogo-equipo-badges">${badges.join(' · ')}</span>` : ''}
+                </div>
+                ${quitar}
+            </div>`;
+        }).join('');
+        box.querySelectorAll('[data-del-tipo]').forEach(btn => {
+            btn.onclick = () => eliminarTipoEquipo(btn.dataset.delTipo);
+        });
+    }
+
+    async function agregarTipoEquipo() {
+        const etiqueta = document.getElementById('nuevoTipoEtiqueta').value.trim();
+        if (!etiqueta) return BerilionUI.alert('Ingrese el nombre del equipo', 'warning');
+
+        const esSwitch = document.getElementById('nuevoTipoSwitch').checked;
+        const esEstacion = document.getElementById('nuevoTipoEstacion').checked;
+        const payload = {
+            etiqueta,
+            requiere_ip: document.getElementById('nuevoTipoIp').checked,
+            requiere_velocidad: document.getElementById('nuevoTipoVelocidad').checked,
+            requiere_puertos: esEstacion,
+            es_switch: esSwitch
+        };
+        if (esSwitch) {
+            payload.puertos_max = parseInt(document.getElementById('nuevoTipoPuertosMax').value, 10) || 0;
+        }
+
+        const r = await apiPost('tipo-equipo-crear', payload);
+        if (!r.ok) return BerilionUI.alert(r.error || 'No se pudo registrar el equipo', 'danger');
+
+        tiposEquipo = r.data || [];
+        document.getElementById('nuevoTipoEtiqueta').value = '';
+        document.getElementById('nuevoTipoIp').checked = false;
+        document.getElementById('nuevoTipoVelocidad').checked = false;
+        document.getElementById('nuevoTipoSwitch').checked = false;
+        document.getElementById('nuevoTipoEstacion').checked = false;
+        document.getElementById('nuevoTipoPuertosMax').value = '8';
+        document.getElementById('groupNuevoTipoPuertos').style.display = 'none';
+        sincronizarTiposEquipoUI();
+        BerilionUI.alert('Equipo agregado al catálogo', 'success');
+    }
+
+    async function eliminarTipoEquipo(codigo) {
+        const r = await apiPost('tipo-equipo-eliminar', { codigo });
+        if (!r.ok) return BerilionUI.alert(r.error || 'No se pudo quitar el equipo', 'danger');
+        tiposEquipo = r.data || [];
+        sincronizarTiposEquipoUI();
+        renderCatalogoModelos();
+        BerilionUI.alert('Equipo eliminado del catálogo', 'warning');
+    }
+
+    function toggleOpcionesNuevoTipo() {
+        const esSwitch = document.getElementById('nuevoTipoSwitch').checked;
+        const esEstacion = document.getElementById('nuevoTipoEstacion').checked;
+        document.getElementById('groupNuevoTipoPuertos').style.display = esSwitch ? 'block' : 'none';
+        if (esSwitch && esEstacion) {
+            document.getElementById('nuevoTipoEstacion').checked = false;
+        }
     }
 
     function bindEvents() {
@@ -143,26 +320,47 @@
         document.getElementById('nodeParent').onchange = actualizarPuertos;
         document.getElementById('btnAgregar').onclick = guardarEquipo;
         document.getElementById('btnGenerarDiagrama').onclick = generarDiagrama;
+        document.getElementById('btnPdf').onclick = prepararImpresionPdf;
         document.getElementById('btnAddPiso').onclick = addPisoBlock;
         document.getElementById('btnGuardarSede').onclick = guardarNuevaSede;
         document.getElementById('btnLimpiarFormSede').onclick = limpiarFormularioSede;
-        document.getElementById('btnAyudaCompleta').onclick = () => {
-            closeSidebar();
-            document.getElementById('helpModal').style.display = 'flex';
-        };
         document.getElementById('btnExportar').onclick = exportarJson;
         document.getElementById('btnImportar').onclick = () => document.getElementById('importFileInput').click();
         document.getElementById('importFileInput').onchange = importarJson;
         document.getElementById('btnGuardarDatosSede').onclick = () => guardarDatosSede();
         document.getElementById('btnGuardarRifRapido').onclick = () => guardarDatosSede(true);
         document.getElementById('btnAbrirPanelSede').onclick = () => openSidebar('panel-sede-activa');
+        document.getElementById('btnAgregarModeloCatalogo').onclick = agregarModeloCatalogo;
+        document.getElementById('btnAgregarTipoEquipo').onclick = agregarTipoEquipo;
+        document.getElementById('nuevoTipoSwitch').onchange = () => {
+            if (document.getElementById('nuevoTipoSwitch').checked) {
+                document.getElementById('nuevoTipoEstacion').checked = false;
+            }
+            toggleOpcionesNuevoTipo();
+        };
+        document.getElementById('nuevoTipoEstacion').onchange = () => {
+            if (document.getElementById('nuevoTipoEstacion').checked) {
+                document.getElementById('nuevoTipoSwitch').checked = false;
+                document.getElementById('groupNuevoTipoPuertos').style.display = 'none';
+            }
+        };
+        document.getElementById('catalogoTipoEquipo').onchange = () => renderCatalogoModelos();
+        const modelInput = document.getElementById('nodeModel');
+        modelInput.onfocus = () => {
+            document.getElementById('dropdownModelos').style.display = 'block';
+            filtrarModelos(modelInput.value);
+        };
+        modelInput.oninput = () => filtrarModelos(modelInput.value);
 
         const busq = document.getElementById('sedeBusqueda');
         busq.onfocus = () => { document.getElementById('dropdownSedes').style.display = 'block'; filtrarSedes(busq.value); };
         busq.oninput = () => filtrarSedes(busq.value);
         document.addEventListener('click', e => {
-            if (!e.target.closest('.custom-select-container')) {
+            if (!e.target.closest('#sedeBusqueda') && !e.target.closest('#dropdownSedes')) {
                 document.getElementById('dropdownSedes').style.display = 'none';
+            }
+            if (!e.target.closest('#nodeModel') && !e.target.closest('#dropdownModelos')) {
+                document.getElementById('dropdownModelos').style.display = 'none';
             }
             if (!e.target.closest('#floatingNavbar')) {
                 cerrarUserDropdown();
@@ -199,6 +397,8 @@
         actualizarSelectZonas();
         actualizarTabla();
         actualizarPadres();
+        actualizarSelectModelos();
+        renderCatalogoModelos();
         editId = null;
         document.getElementById('diagramSection').style.display = 'none';
         if (network) { network.destroy(); network = null; }
@@ -301,15 +501,103 @@
         const codigo = document.getElementById('nodeType').value;
         const t = tipoByCodigo(codigo);
         document.getElementById('groupIp').style.display = t && parseInt(t.requiere_ip, 10) ? 'flex' : 'none';
-        document.getElementById('groupPorts').style.display = codigo === 'PC' ? 'flex' : 'none';
+        document.getElementById('groupPorts').style.display = tipoUsaPuertosPadre(t) ? 'flex' : 'none';
         document.getElementById('groupSpeed').style.display = requiereVelocidad(t) ? 'flex' : 'none';
         document.getElementById('groupGeneration').style.display = codigo === 'Servidor' ? 'flex' : 'none';
         document.getElementById('labelModel').textContent = codigo === 'Servidor' ? 'Procesador' : 'Modelo';
-        if (codigo === 'PC') actualizarPuertos();
+        document.getElementById('groupModel').style.display = tipoUsaPuertosPadre(t) ? 'none' : 'flex';
+        actualizarSelectModelos();
+        if (tipoUsaPuertosPadre(t)) actualizarPuertos();
+    }
+
+    function actualizarSelectModelos(modeloSeleccionado = '') {
+        const codigo = document.getElementById('nodeType').value;
+        const inp = document.getElementById('nodeModel');
+        const dd = document.getElementById('dropdownModelos');
+        const t = tipoByCodigo(codigo);
+        if (tipoUsaPuertosPadre(t)) {
+            inp.value = '';
+            modelosFiltradosActuales = [];
+            dd.innerHTML = '';
+            return;
+        }
+        modelosFiltradosActuales = getModelosPorTipo(codigo);
+        if (modeloSeleccionado && !modelosFiltradosActuales.includes(modeloSeleccionado)) {
+            modelosFiltradosActuales.push(modeloSeleccionado);
+        }
+        inp.value = modeloSeleccionado || '';
+        filtrarModelos(inp.value);
+    }
+
+    function filtrarModelos(texto) {
+        const t = (texto || '').toLowerCase();
+        const lista = modelosFiltradosActuales.filter(m => m.toLowerCase().includes(t));
+        const dd = document.getElementById('dropdownModelos');
+        dd.innerHTML = lista.length
+            ? lista.map(m => `<div class="custom-select-option" data-modelo="${encodeURIComponent(m)}">${m}</div>`).join('')
+            : '<div class="custom-select-option no-results">Sin resultados</div>';
+        dd.querySelectorAll('.custom-select-option[data-modelo]').forEach(op => {
+            op.onclick = () => {
+                document.getElementById('nodeModel').value = decodeURIComponent(op.dataset.modelo);
+                dd.style.display = 'none';
+            };
+        });
+    }
+
+    async function renderCatalogoModelos() {
+        const tipoCodigo = document.getElementById('catalogoTipoEquipo').value;
+        const box = document.getElementById('catalogoModelosLista');
+        if (!tipoCodigo) {
+            box.innerHTML = 'Seleccione un tipo de equipo.';
+            return;
+        }
+        const modelos = getModelosPorTipo(tipoCodigo);
+        if (!modelos.length) {
+            box.innerHTML = 'No hay modelos registrados para este tipo.';
+            return;
+        }
+        box.innerHTML = modelos.map(m => (
+            `<div class="modelo-item-row">
+                <span>${m}</span>
+                <button type="button" class="btn btn-danger btn-sm" data-del-modelo="${tipoCodigo}|${encodeURIComponent(m)}">Quitar</button>
+            </div>`
+        )).join('');
+        box.querySelectorAll('[data-del-modelo]').forEach(btn => {
+            btn.onclick = async () => {
+                const [tipo, modeloEncoded] = btn.dataset.delModelo.split('|');
+                const modelo = decodeURIComponent(modeloEncoded);
+                const r = await apiPost('modelo-equipo-eliminar', { tipo_codigo: tipo, nombre: modelo });
+                if (!r.ok) return BerilionUI.alert(r.error || 'No se pudo eliminar el modelo', 'danger');
+                await cargarCatalogoModelos();
+                await renderCatalogoModelos();
+                if (document.getElementById('nodeType').value === tipo) {
+                    actualizarSelectModelos(document.getElementById('nodeModel').value.trim());
+                }
+                BerilionUI.alert('Modelo eliminado', 'warning');
+            };
+        });
+    }
+
+    async function agregarModeloCatalogo() {
+        const tipoCodigo = document.getElementById('catalogoTipoEquipo').value;
+        const inp = document.getElementById('catalogoNuevoModelo');
+        const modelo = inp.value.trim();
+        if (!tipoCodigo) return BerilionUI.alert('Seleccione un tipo de equipo', 'warning');
+        if (!modelo) return BerilionUI.alert('Ingrese un modelo válido', 'warning');
+        const r = await apiPost('modelo-equipo-crear', { tipo_codigo: tipoCodigo, nombre: modelo });
+        if (!r.ok) return BerilionUI.alert(r.error || 'No se pudo guardar el modelo', 'danger');
+        await cargarCatalogoModelos();
+        inp.value = '';
+        await renderCatalogoModelos();
+        if (document.getElementById('nodeType').value === tipoCodigo) {
+            actualizarSelectModelos(modelo);
+        }
+        BerilionUI.alert('Modelo agregado al catálogo', 'success');
     }
 
     async function actualizarPuertos() {
-        if (!sedeActual || document.getElementById('nodeType').value !== 'PC') return;
+        const t = tipoByCodigo(document.getElementById('nodeType').value);
+        if (!sedeActual || !tipoUsaPuertosPadre(t)) return;
         const padreId = document.getElementById('nodeParent').value;
         const sel = document.getElementById('nodePorts');
         if (!padreId) {
@@ -334,7 +622,7 @@
     function actualizarPadres() {
         const sel = document.getElementById('nodeParent');
         sel.innerHTML = '<option value="">Nodo principal</option>';
-        equipos.filter(e => e.tipo_codigo !== 'PC' && String(e.id) !== String(editId)).forEach(e => {
+        equipos.filter(e => !tipoUsaPuertosPadre(tipoByCodigo(e.tipo_codigo)) && String(e.id) !== String(editId)).forEach(e => {
             const t = tipoByCodigo(e.tipo_codigo);
             const lbl = t ? t.etiqueta : e.tipo_codigo;
             sel.innerHTML += `<option value="${e.id}">${lbl} (${e.modelo})</option>`;
@@ -413,6 +701,12 @@
             puertos_usados: document.getElementById('nodePorts').value,
             switch_capa: parseInt(t.es_switch, 10) ? capaFromTipo(codigo) : null
         };
+        if (!tipoUsaPuertosPadre(t) && !payload.modelo) {
+            return BerilionUI.alert('Seleccione un modelo del catálogo', 'warning');
+        }
+        if (!tipoUsaPuertosPadre(t) && !getModelosPorTipo(codigo).includes(payload.modelo)) {
+            return BerilionUI.alert('Seleccione un modelo válido del catálogo', 'warning');
+        }
         const r = await apiPost('equipo-guardar', payload);
         if (!r.ok) return BerilionUI.alert(r.error, 'danger');
         equipos = r.data;
@@ -434,11 +728,11 @@
         document.getElementById('nodeZona').value = e.zona_id || '';
         document.getElementById('nodeParent').value = e.padre_id || '';
         document.getElementById('medioEnlace').value = e.medio_enlace || 'cableado';
-        document.getElementById('nodeModel').value = e.modelo || '';
         document.getElementById('nodeIp').value = e.ip || '';
         document.getElementById('nodeSpeed').value = e.velocidad || 'Gigabit (1000 Mbps)';
         onTipoChange();
-        if (e.tipo_codigo === 'PC') {
+        actualizarSelectModelos(e.modelo || '');
+        if (tipoUsaPuertosPadre(tipoByCodigo(e.tipo_codigo))) {
             document.getElementById('nodePorts').value = e.puertos_usados;
         }
         document.getElementById('formActionsContainer').innerHTML = `
@@ -546,6 +840,21 @@
         };
     }
 
+    function labelEquipoCorto(equipo) {
+        const tipo = tipoByCodigo(equipo.tipo_codigo);
+        const etiqueta = tipo ? tipo.etiqueta : equipo.tipo_codigo;
+        if (tipoUsaPuertosPadre(tipo)) {
+            return `${etiqueta} (${equipo.puertos_usados || 1}p)`;
+        }
+        if (equipo.ip) {
+            return `${etiqueta} (${equipo.ip})`;
+        }
+        if (equipo.modelo && equipo.modelo !== 'N/A') {
+            return `${etiqueta} (${equipo.modelo})`;
+        }
+        return etiqueta;
+    }
+
     function generarDiagrama() {
         if (!sedeActual || !equipos.length) {
             return BerilionUI.alert('Agregue equipos para generar el diagrama', 'warning');
@@ -566,6 +875,14 @@
 
         const zonaNodeId = {};
         const idsNecesarios = new Set();
+        const equiposPorZona = {};
+
+        equipos.forEach(e => {
+            if (!e.zona_id) return;
+            const zid = String(e.zona_id);
+            if (!equiposPorZona[zid]) equiposPorZona[zid] = [];
+            equiposPorZona[zid].push(e);
+        });
 
         equipos.forEach(e => {
             if (!e.zona_id) return;
@@ -581,10 +898,14 @@
             if (zonaNodeId[z.id]) return;
             zonaNodeId[z.id] = nid;
             const esArea = z.tipo === 'area';
+            const equiposEnZona = (equiposPorZona[String(z.id)] || []);
+            const detalleArea = esArea && equiposEnZona.length
+                ? `\n\n${equiposEnZona.map(eq => `- ${labelEquipoCorto(eq)}`).join('\n')}`
+                : '';
             nodes.push({
                 id: nid,
                 label: esArea
-                    ? `<b>ÁREA</b>\n${z.nombre}\n<i>${z.piso_nombre || ''}</i>`
+                    ? `<b>ÁREA</b>\n${z.nombre}\n<i>${z.piso_nombre || ''}</i>${detalleArea}`
                     : `<b>PISO</b>\n${z.nombre}`,
                 shape: 'box',
                 color: {
@@ -634,7 +955,7 @@
             }
             if (e.ip) label += `\n${e.ip}`;
             else if (e.modelo && e.modelo !== 'N/A') label += `\n${e.modelo}`;
-            if (e.tipo_codigo === 'PC') label = `<b>PC</b>\nP:${e.puertos_usados}`;
+            if (tipoUsaPuertosPadre(t)) label = `<b>${etiqueta}</b>\nP:${e.puertos_usados}`;
 
             nodes.push({
                 id: 'eq_' + e.id,

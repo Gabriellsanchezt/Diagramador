@@ -28,9 +28,6 @@
             </div>
             <button type="submit" class="btn btn-primary btn-login" id="btnLoginSubmit">Iniciar Sesión</button>
         </form>
-        <p class="field-hint" style="text-align:center;margin-top:16px;">
-            Usuario por defecto: <strong>admin</strong> / Contraseña: <strong>berilion23</strong>
-        </p>
         <p style="text-align: center; color: var(--text-muted); font-size: 11px; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px;">
             &copy; 2026 Berilion J-508195619.
         </p>

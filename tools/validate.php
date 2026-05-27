@@ -64,6 +64,7 @@ $required = [
     'app/Core/Url.php',
     'app/Controllers/AuthController.php',
     'app/Controllers/ApiController.php',
+    'app/Models/ModeloEquipo.php',
     'app/Views/login.php',
     'app/Views/diagramador.php',
 ];
@@ -85,7 +86,7 @@ try {
     $pdo = App\Core\Database::connection();
     ok('Conexión MySQL');
 
-    $tables = ['usuarios', 'sedes', 'sede_zonas', 'tipos_equipo', 'equipos'];
+    $tables = ['usuarios', 'sedes', 'sede_zonas', 'tipos_equipo', 'modelos_equipo', 'equipos'];
     foreach ($tables as $t) {
         $stmt = $pdo->query("SHOW TABLES LIKE " . $pdo->quote($t));
         if (!$stmt->fetchColumn()) {

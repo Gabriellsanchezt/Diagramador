@@ -13,6 +13,7 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 DROP TABLE IF EXISTS equipos;
+DROP TABLE IF EXISTS modelos_equipo;
 DROP TABLE IF EXISTS sede_zonas;
 DROP TABLE IF EXISTS sedes;
 DROP TABLE IF EXISTS tipos_equipo;
@@ -55,24 +56,33 @@ CREATE TABLE tipos_equipo (
 ) ENGINE=InnoDB;
 
 INSERT INTO tipos_equipo (codigo, etiqueta, requiere_ip, requiere_velocidad, requiere_puertos, es_switch, puertos_max, orden) VALUES
-('Router',              'Router',                         0, 1, 0, 0,  4,  10),
-('Deco',                'Deco / Mesh',                    0, 1, 0, 0,  4,  20),
-('Repetidor',           'Repetidor AP',                   1, 1, 0, 0,  4,  30),
-('Switch_Acceso_16',    'Switch Acceso Rack (16p)',       0, 1, 0, 1, 16,  40),
-('Switch_Acceso_24',    'Switch Acceso Rack (24p)',       0, 1, 0, 1, 24,  41),
-('Switch_Distrib_16',   'Switch Distribución Rack (16p)', 0, 1, 0, 1, 16,  50),
-('Switch_Distrib_24',   'Switch Distribución Rack (24p)', 0, 1, 0, 1, 24,  51),
-('Switch_Nucleo_16',    'Switch Núcleo Rack (16p)',        0, 1, 0, 1, 16,  60),
-('Switch_Puesto_5',     'Switch Acceso Puesto (5p)',      0, 1, 0, 1,  5,  70),
-('Switch_Puesto_8',     'Switch Acceso Puesto (8p)',      0, 1, 0, 1,  8,  71),
-('Servidor',            'Servidor',                       1, 0, 0, 0, NULL, 80),
-('DVR',                 'DVR / NVR',                      0, 0, 0, 0, NULL, 90),
-('Camara_IP',           'Cámara IP',                      1, 0, 0, 0, NULL, 95),
-('Camara_Cableada',     'Cámara cableada (analógica)',    0, 0, 0, 0, NULL, 96),
-('Interbancario',       'Interbancario',                  0, 0, 0, 0, NULL, 100),
-('Biometrico',          'Biométrico',                     1, 0, 0, 0, NULL, 110),
-('Impresora',           'Impresora',                      1, 0, 0, 0, NULL, 120),
-('PC',                  'Estación de Trabajo',             0, 0, 1, 0, NULL, 130);
+('Router',              'Router',                  0, 1, 0, 0,  4,  10),
+('Deco',                'Deco',                    0, 1, 0, 0,  4,  20),
+('Repetidor',           'Repetidor',               1, 1, 0, 0,  4,  30),
+('Switch Rack (16p)',   'Switch Rack (16p)',       0, 1, 0, 1, 16,  40),
+('Switch Rack (24p)',   'Switch Rack (24p)',       0, 1, 0, 1, 24,  50),
+('Switch Puesto (5p)',  'Switch Puesto (5p)',      0, 1, 0, 1,  5,  60),
+('Switch Puesto (8p)',  'Switch Puesto (8p)',      0, 1, 0, 1,  8,  70),
+('Servidor',            'Servidor',                1, 0, 0, 0, NULL, 80),
+('DVR',                 'DVR / NVR',               0, 0, 0, 0, NULL, 90),
+('Interbancario',       'Interbancario',           0, 0, 0, 0, NULL, 100),
+('Biométrico',          'Biométrico',              1, 0, 0, 0, NULL, 110),
+('Impresora',           'Impresora',               1, 0, 0, 0, NULL, 120),
+('PC',                  'Estación de Trabajo',     0, 0, 1, 0, NULL, 130);
+
+-- -----------------------------------------------------------------------------
+-- Catálogo administrable de modelos por tipo de equipo
+-- -----------------------------------------------------------------------------
+CREATE TABLE modelos_equipo (
+  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  tipo_codigo  VARCHAR(40)  NOT NULL,
+  nombre       VARCHAR(120) NOT NULL,
+  activo       TINYINT(1)   NOT NULL DEFAULT 1,
+  creado_en    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_modelo_tipo_nombre (tipo_codigo, nombre),
+  KEY idx_tipo_activo (tipo_codigo, activo),
+  FOREIGN KEY (tipo_codigo) REFERENCES tipos_equipo(codigo)
+) ENGINE=InnoDB;
 
 -- -----------------------------------------------------------------------------
 -- Sedes

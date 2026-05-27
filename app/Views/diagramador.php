@@ -23,13 +23,33 @@
         <h2>Gestión</h2>
         <button type="button" class="sidebar-close" id="btnCloseSidebar" aria-label="Cerrar menú">&times;</button>
     </div>
-    <nav class="sidebar-nav" role="tablist">
-        <button type="button" class="sidebar-nav-btn is-active" data-panel="panel-nueva-sede">Nueva sede</button>
-        <button type="button" class="sidebar-nav-btn" data-panel="panel-sede-activa">Sede activa</button>
-        <button type="button" class="sidebar-nav-btn" data-panel="panel-respaldos">Respaldos</button>
-        <button type="button" class="sidebar-nav-btn" data-panel="panel-ayuda">Ayuda</button>
-    </nav>
-    <div class="sidebar-body">
+    <div class="sidebar-layout">
+        <nav class="sidebar-menu" role="tablist" aria-label="Secciones de gestión">
+            <p class="sidebar-menu-label">Sedes</p>
+            <button type="button" class="sidebar-menu-item is-active" data-panel="panel-nueva-sede">
+                <span class="sidebar-menu-icon" aria-hidden="true">+</span>
+                <span class="sidebar-menu-text">Nueva sede</span>
+            </button>
+            <button type="button" class="sidebar-menu-item" data-panel="panel-sede-activa">
+                <span class="sidebar-menu-icon" aria-hidden="true">◎</span>
+                <span class="sidebar-menu-text">Sede activa</span>
+            </button>
+            <button type="button" class="sidebar-menu-item" data-panel="panel-respaldos">
+                <span class="sidebar-menu-icon" aria-hidden="true">↓</span>
+                <span class="sidebar-menu-text">Respaldos</span>
+            </button>
+
+            <p class="sidebar-menu-label" id="sidebarNavModelos">Catálogo</p>
+            <div class="sidebar-menu-group" id="sidebarMenuCatalogo">
+                <button type="button" class="sidebar-menu-item sidebar-menu-item--sub" data-panel="panel-catalogo-equipos">
+                    <span class="sidebar-menu-text">Registros de equipos</span>
+                </button>
+                <button type="button" class="sidebar-menu-item sidebar-menu-item--sub" data-panel="panel-catalogo-modelos">
+                    <span class="sidebar-menu-text">Modelos</span>
+                </button>
+            </div>
+        </nav>
+        <div class="sidebar-body">
         <div class="sidebar-panel is-active" id="panel-nueva-sede" role="tabpanel">
             <p class="sidebar-section-title">Registrar sede</p>
             <div class="form-group">
@@ -37,9 +57,9 @@
                 <input type="text" id="nuevaSedeNombre" maxlength="255" placeholder="Ej: Farmacia San Ignacio (JT)">
             </div>
             <div class="form-group">
-                <label for="nuevaSedeRif">RIF (opcional)</label>
+                <label for="nuevaSedeRif">RIF</label>
                 <input type="text" id="nuevaSedeRif" placeholder="J-12345678-9" maxlength="20">
-                <span class="field-hint">Formato: J-12345678-9</span>
+
             </div>
             <div class="form-group">
                 <label for="nuevaSedeCable">Categoría de cableado</label>
@@ -98,20 +118,50 @@
             </div>
         </div>
 
-        <div class="sidebar-panel" id="panel-ayuda" role="tabpanel">
-            <p class="sidebar-section-title">Guía rápida</p>
-            <div class="sidebar-hint-box">
-                <ol>
-                    <li>Registre <strong>pisos</strong> y, dentro de cada uno, sus <strong>áreas</strong>.</li>
-                    <li>Seleccione la sede en el panel principal para agregar equipos.</li>
-                    <li>Switches por capa: acceso, distribución o núcleo.</li>
-                    <li>IP obligatoria: biométrico, servidor, impresora, repetidor AP y cámara IP.</li>
-                    <li>Conexión cableada (línea sólida) o inalámbrica (punteada) en el diagrama.</li>
-                </ol>
+        <div class="sidebar-panel" id="panel-catalogo-equipos" role="tabpanel">
+            <p class="sidebar-section-title">Registros de equipos</p>
+            <p class="field-hint" style="margin-bottom:12px;">Agregue tipos al catálogo. Aparecerán en el selector «Equipo» del diagrama.</p>
+            <div class="form-group">
+                <label for="nuevoTipoEtiqueta">Nombre del equipo *</label>
+                <input type="text" id="nuevoTipoEtiqueta" maxlength="80" placeholder="Ej: Access Point, UPS, Teléfono IP">
             </div>
-            <div class="sidebar-footer-actions" style="margin-top:16px;">
-                <button type="button" class="btn btn-help" id="btnAyudaCompleta">Ver instrucciones completas</button>
+            <div class="catalogo-tipo-opciones">
+                <label class="catalogo-check"><input type="checkbox" id="nuevoTipoIp"> Requiere IP</label>
+                <label class="catalogo-check"><input type="checkbox" id="nuevoTipoVelocidad"> Requiere velocidad</label>
+                <label class="catalogo-check"><input type="checkbox" id="nuevoTipoSwitch"> Es switch</label>
+                <label class="catalogo-check"><input type="checkbox" id="nuevoTipoEstacion"> Estación de trabajo (puertos en padre)</label>
             </div>
+            <div class="form-group" id="groupNuevoTipoPuertos" style="display:none;">
+                <label for="nuevoTipoPuertosMax">Puertos del switch</label>
+                <input type="number" id="nuevoTipoPuertosMax" min="4" max="48" value="8" placeholder="8">
+            </div>
+            <div class="sidebar-footer-actions" style="margin-top:8px;padding-top:0;border-top:none;">
+                <button type="button" class="btn btn-primary" id="btnAgregarTipoEquipo">Agregar equipo</button>
+            </div>
+            <p class="sidebar-section-title" style="margin-top:16px;">Equipos registrados</p>
+            <div class="catalogo-equipos-list" id="catalogoEquiposLista">
+                Cargando tipos de equipo…
+            </div>
+        </div>
+
+        <div class="sidebar-panel" id="panel-catalogo-modelos" role="tabpanel">
+            <p class="sidebar-section-title">Catálogo de modelos</p>
+            <div class="form-group">
+                <label for="catalogoTipoEquipo">Tipo de equipo</label>
+                <select id="catalogoTipoEquipo"></select>
+            </div>
+            <div class="form-group">
+                <label for="catalogoNuevoModelo">Nuevo modelo</label>
+                <input type="text" id="catalogoNuevoModelo" maxlength="120" placeholder="Ej: Cisco CBS250-24T-4G">
+            </div>
+            <div class="sidebar-footer-actions" style="margin-top:8px;padding-top:0;border-top:none;">
+                <button type="button" class="btn btn-primary" id="btnAgregarModeloCatalogo">Agregar modelo</button>
+            </div>
+            <p class="sidebar-section-title" style="margin-top:16px;">Modelos registrados</p>
+            <div class="sidebar-hint-box" id="catalogoModelosLista">
+                No hay modelos registrados para este tipo.
+            </div>
+        </div>
         </div>
     </div>
 </aside>
@@ -190,7 +240,10 @@
         </div>
         <div class="form-group" id="groupModel">
             <label for="nodeModel" id="labelModel">Modelo</label>
-            <input type="text" id="nodeModel" style="width:100%">
+            <div class="custom-select-container">
+                <input type="text" id="nodeModel" placeholder="Buscar y seleccionar modelo..." autocomplete="off" style="width:100%;">
+                <div id="dropdownModelos" class="custom-select-dropdown"></div>
+            </div>
         </div>
         <div class="form-group" id="groupIp" style="display:none;">
             <label for="nodeIp">Dirección IP (IPv4)</label>
@@ -251,7 +304,11 @@
                     <span>Jerarquía: Sede → Piso → Área → Equipo</span>
                 </div>
             </div>
-            <button type="button" class="btn btn-pdf" onclick="window.print()">PDF</button>
+            <button type="button" class="btn btn-pdf" id="btnPdf">PDF</button>
+        </div>
+        <div class="print-template" id="printTemplate">
+            <div class="print-template-title" id="printSedeNombre">Sede</div>
+            <div class="print-template-subtitle" id="printSedeRif">RIF: —</div>
         </div>
         <div id="network-diagram"></div>
     </div>
