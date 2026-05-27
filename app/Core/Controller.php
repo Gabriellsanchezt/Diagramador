@@ -6,6 +6,7 @@ class Controller
 {
     protected function view(string $name, array $data = []): void
     {
+        $data['baseUrl'] = $data['baseUrl'] ?? Url::basePath();
         extract($data, EXTR_SKIP);
         $path = ROOT_PATH . '/app/Views/' . $name . '.php';
         if (!is_file($path)) {
@@ -26,7 +27,7 @@ class Controller
 
     protected function requireAuth(): void
     {
-        $key = (require ROOT_PATH . '/config/app.php')['session_key'];
+        $key = Url::appConfig()['session_key'];
         if (empty($_SESSION[$key])) {
             $this->json(['ok' => false, 'error' => 'Sesión no válida'], 401);
         }
@@ -34,6 +35,6 @@ class Controller
 
     protected function baseUrl(): string
     {
-        return rtrim((require ROOT_PATH . '/config/app.php')['base_url'], '/');
+        return Url::basePath();
     }
 }

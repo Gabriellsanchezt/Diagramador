@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Diagramador de Red - Berilion</title>
-    <link rel="stylesheet" href="<?= htmlspecialchars($baseUrl) ?>/assets/css/app.css">
+    <link rel="stylesheet" href="assets/css/app.css">
     <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 </head>
 <body>
@@ -276,8 +276,7 @@
     </div>
 </div>
 
-<script>window.APP_BASE = <?= json_encode($baseUrl) ?>;</script>
-<script src="<?= htmlspecialchars($baseUrl) ?>/assets/js/common.js"></script>
-<script src="<?= htmlspecialchars($baseUrl) ?>/assets/js/diagramador.js"></script>
+<script src="assets/js/common.js"></script>
+<script src="assets/js/diagramador.js"></script>
 </body>
 </html>

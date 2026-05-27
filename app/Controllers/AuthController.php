@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Url;
 use App\Core\Validator;
 use App\Models\Usuario;
 
@@ -10,12 +11,12 @@ class AuthController extends Controller
 {
     public function loginPage(): void
     {
-        $key = (require ROOT_PATH . '/config/app.php')['session_key'];
+        $key = Url::appConfig()['session_key'];
         if (!empty($_SESSION[$key])) {
-            header('Location: ' . $this->baseUrl() . '/index.php?page=app');
+            header('Location: ' . Url::route('app'));
             exit;
         }
-        $this->view('login', ['baseUrl' => $this->baseUrl()]);
+        $this->view('login');
     }
 
     public function loginApi(): void
@@ -33,7 +34,12 @@ class AuthController extends Controller
             $this->json(['ok' => false, 'error' => $errPass], 422);
         }
 
-        $row = Usuario::findByUsuario($user);
+        try {
+            $row = Usuario::findByUsuario($user);
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => 'Error de base de datos. Revise MySQL y sql/schema.sql'], 500);
+        }
+
         if (!$row || !(int) $row['activo']) {
             $this->json(['ok' => false, 'error' => 'Usuario o contraseña incorrectos.'], 401);
         }
@@ -41,11 +47,11 @@ class AuthController extends Controller
             $this->json(['ok' => false, 'error' => 'Usuario o contraseña incorrectos.'], 401);
         }
 
-        $key = (require ROOT_PATH . '/config/app.php')['session_key'];
+        $key = Url::appConfig()['session_key'];
         $_SESSION[$key] = [
-            'id'     => (int) $row['id'],
-            'usuario'=> $row['usuario'],
-            'nombre' => $row['nombre'],
+            'id'      => (int) $row['id'],
+            'usuario' => $row['usuario'],
+            'nombre'  => $row['nombre'],
         ];
 
         $this->json(['ok' => true, 'usuario' => $row['usuario']]);
@@ -53,10 +59,10 @@ class AuthController extends Controller
 
     public function logout(): void
     {
-        $key = (require ROOT_PATH . '/config/app.php')['session_key'];
+        $key = Url::appConfig()['session_key'];
         unset($_SESSION[$key]);
         session_destroy();
-        header('Location: ' . $this->baseUrl() . '/index.php');
+        header('Location: ' . Url::route('login'));
         exit;
     }
 }

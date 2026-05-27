@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
-define('ROOT_PATH', __DIR__);
-define('APP_PATH', ROOT_PATH . '/app');
+if (!defined('ROOT_PATH')) {
+    define('ROOT_PATH', __DIR__);
+}
+if (!defined('APP_PATH')) {
+    define('APP_PATH', ROOT_PATH . '/app');
+}
 
 spl_autoload_register(function (string $class): void {
     $prefix = 'App\\';
@@ -17,4 +21,21 @@ spl_autoload_register(function (string $class): void {
     }
 });
 
-session_start();
+require_once APP_PATH . '/Core/Url.php';
+
+$cookiePath = \App\Core\Url::basePath();
+if ($cookiePath === '') {
+    $cookiePath = '/';
+} else {
+    $cookiePath .= '/';
+}
+
+if (php_sapi_name() !== 'cli' && session_status() === PHP_SESSION_NONE) {
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => $cookiePath,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    session_start();
+}

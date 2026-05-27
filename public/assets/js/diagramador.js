@@ -74,7 +74,7 @@
 
     document.getElementById('btnDropdownUser').onclick = toggleUserDropdown;
     document.getElementById('btnCerrarSesion').onclick = () => {
-        window.location.href = window.APP_BASE + '/index.php?page=logout';
+        window.location.href = 'index.php?page=logout';
     };
 
     const sidebar = document.getElementById('appSidebar');

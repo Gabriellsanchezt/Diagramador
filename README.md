@@ -1,23 +1,29 @@
 # Diagramador de Red — Berilion
 
-Aplicación MVC (PHP + MySQL) para diagramar la estructura de red por sedes, con pisos/áreas, capas de switch, conexiones cableadas/inalámbricas y gestión de IPs.
+Aplicación MVC (PHP + MySQL) para diagramar la estructura de red por sedes.
 
 ## Requisitos
 
 - XAMPP (Apache + MySQL/MariaDB + PHP 8+)
 - Extensiones PHP: `pdo_mysql`, `json`, `session`
 
-## Instalación en XAMPP
+## Instalación en XAMPP (cualquier carpeta)
 
-1. El proyecto debe estar en `C:\xampp\htdocs\Berilion\Diagramador\`
-2. Inicie **Apache** y **MySQL** desde el panel de XAMPP.
-3. Importe la base de datos:
-   - Abra [http://localhost/phpmyadmin](http://localhost/phpmyadmin)
-   - Pestaña **Importar** → archivo `sql/schema.sql` (crea la base **`diagrama_bd`**)
-   - Si ya tenía `diagramador_berilion`, ejecute `sql/renombrar_a_diagrama_bd.sql` en su lugar
-4. Si su MySQL tiene contraseña, edite `config/database.php`.
-5. Abra la aplicación:  
-   **http://localhost/Berilion/Diagramador/** o **http://localhost/Berilion/Diagramador/public/index.php**
+1. Copie el proyecto a `htdocs`, por ejemplo:
+   - `C:\xampp\htdocs\Diagramador\`
+   - o `C:\xampp\htdocs\Berilion\Diagramador\`
+2. Inicie **Apache** y **MySQL**.
+3. Importe **`sql/schema.sql`** en phpMyAdmin (crea la base **`diagrama_bd`**).
+4. Si MySQL tiene contraseña, copie `config/database.local.php.example` → `config/database.local.php` y edite usuario/clave.
+5. Abra en el navegador (ajuste la ruta según su carpeta):
+
+   ```
+   http://localhost/Diagramador/public/index.php
+   ```
+
+   También puede usar el `index.php` de la raíz del proyecto (redirige a `public/`).
+
+**No hace falta configurar `/Berilion/`**: la ruta se detecta sola. Solo si falla, copie `config/app.local.php.example` → `config/app.local.php` y defina `base_url`.
 
 ### Credenciales por defecto
 
@@ -25,47 +31,35 @@ Aplicación MVC (PHP + MySQL) para diagramar la estructura de red por sedes, con
 |---------|--------------|
 | admin   | berilion23   |
 
-**Validaciones de login:** usuario 3–50 caracteres (letras, números, `.`, `-`, `_`); contraseña 8–72 caracteres. Validación en navegador y en servidor.
+## Validar instalación
+
+Desde la carpeta del proyecto:
+
+```bash
+php tools/validate.php
+```
+
+Debe terminar con **0 errores**. También prueba login HTTP si Apache está activo.
+
+## Si el login “no hace nada”
+
+1. Entre siempre por **`public/index.php`** (no abra archivos sueltos del disco).
+2. Verifique que **MySQL** esté activo y exista la base **`diagrama_bd`**.
+3. Abra F12 → pestaña **Red**: al enviar login debe llamarse `index.php?page=login-api` y responder JSON.
+4. Si aparece error de base de datos, revise `config/database.local.php`.
 
 ## Estructura MVC
 
 ```
 Diagramador/
-├── app/
-│   ├── Controllers/   Auth, App, Api
-│   ├── Core/          Database, Validator, Controller
-│   ├── Models/        Usuario, Sede, SedeZona, Equipo, TipoEquipo
-│   └── Views/         login, diagramador
-├── config/            database.php, app.php
-├── public/            index.php, assets/
-├── sql/schema.sql     Esquema completo + datos iniciales
+├── app/Controllers, Models, Views, Core
+├── config/            app.php, database.php (+ .local.php opcionales)
+├── public/            index.php, assets/  ← punto de entrada web
+├── sql/schema.sql
 └── bootstrap.php
 ```
 
-## Funcionalidades
-
-- **Sedes:** búsqueda, alta con nombre, RIF opcional, cableado (Cat5e/Cat6 o no especificado).
-- **Pisos y áreas:** cada área pertenece a un piso; en el diagrama: Sede → Piso → Área → Equipo.
-- **Switches por capa:** acceso, distribución, núcleo (tipos en catálogo `tipos_equipo`).
-- **IPs obligatorias:** biométrico, servidor, impresora, repetidor AP, cámara IP.
-- **Conexión:** cableado (línea sólida) o inalámbrico (línea punteada) en formulario y diagrama.
-- **Cámaras:** IP o cableada (sin IP).
-- **Equipos:** jerarquía padre/hijo, control de puertos en PCs.
-
-## API interna (requiere sesión)
-
-| Acción | Método | Parámetros |
-|--------|--------|------------|
-| `tipos` | GET | — |
-| `sedes` | GET | `q` búsqueda |
-| `sede-detalle` | GET | `id` |
-| `sede-crear` | POST JSON | nombre, rif, categoria_cable, pisos[] |
-| `sede-actualizar` | POST JSON | sede_id, rif, categoria_cable |
-| `equipo-guardar` | POST JSON | sede_id, tipo_codigo, ip, medio_enlace, … |
-| `equipo-eliminar` | POST JSON | sede_id, id |
-| `puertos-libres` | GET | sede_id, padre_id |
-
 ## Punto de entrada
 
-- `index.php` (raíz) redirige a `public/index.php`
-- Toda la aplicación vive en `public/` y `app/`
+- `public/index.php` — aplicación principal
+- `index.php` (raíz) — redirección a `public/`

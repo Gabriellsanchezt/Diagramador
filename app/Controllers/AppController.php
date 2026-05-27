@@ -3,18 +3,18 @@
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Url;
 
 class AppController extends Controller
 {
     public function index(): void
     {
-        $key = (require ROOT_PATH . '/config/app.php')['session_key'];
+        $key = Url::appConfig()['session_key'];
         if (empty($_SESSION[$key])) {
-            header('Location: ' . $this->baseUrl() . '/index.php');
+            header('Location: ' . Url::route('login'));
             exit;
         }
         $this->view('diagramador', [
-            'baseUrl' => $this->baseUrl(),
             'usuario' => $_SESSION[$key]['usuario'],
         ]);
     }

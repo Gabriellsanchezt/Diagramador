@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ingreso - Diagramador Berilion</title>
-    <link rel="stylesheet" href="<?= htmlspecialchars($baseUrl) ?>/assets/css/app.css">
+    <link rel="stylesheet" href="assets/css/app.css">
 </head>
 <body>
 <div id="popover-container"></div>
@@ -26,10 +26,10 @@
                 <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Ingrese su contraseña" maxlength="72">
                 <div class="login-error" id="errPass"></div>
             </div>
-            <button type="submit" class="btn btn-primary btn-login">Iniciar Sesión</button>
+            <button type="submit" class="btn btn-primary btn-login" id="btnLoginSubmit">Iniciar Sesión</button>
         </form>
         <p class="field-hint" style="text-align:center;margin-top:16px;">
-            Usuario: letras, números, punto, guion. Contraseña: 8 a 72 caracteres.
+            Usuario por defecto: <strong>admin</strong> / Contraseña: <strong>berilion23</strong>
         </p>
         <p style="text-align: center; color: var(--text-muted); font-size: 11px; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px;">
             &copy; 2026 Berilion J-508195619.
@@ -40,10 +40,8 @@
     </button>
 </div>
 
-<script src="<?= htmlspecialchars($baseUrl) ?>/assets/js/common.js"></script>
+<script src="assets/js/common.js"></script>
 <script>
-const BASE = <?= json_encode($baseUrl) ?>;
-
 document.getElementById('btnAspectoLogin').onclick = () => {
     document.body.classList.toggle('dark-mode');
     BerilionUI.alert('Modo de visualización cambiado', 'success');
@@ -73,20 +71,42 @@ function validarLoginCliente() {
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!validarLoginCliente()) return;
-    const res = await fetch(BASE + '/index.php?page=login-api', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            usuario: document.getElementById('loginUser').value.trim(),
-            password: document.getElementById('loginPassword').value
-        })
-    });
-    const data = await res.json();
-    if (data.ok) {
-        BerilionUI.alert('Acceso concedido', 'success');
-        location.href = BASE + '/index.php?page=app';
-    } else {
-        BerilionUI.alert(data.error || 'Error de acceso', 'danger');
+
+    const btn = document.getElementById('btnLoginSubmit');
+    const textoOriginal = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Ingresando...';
+
+    try {
+        const res = await fetch('index.php?page=login-api', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+                usuario: document.getElementById('loginUser').value.trim(),
+                password: document.getElementById('loginPassword').value
+            })
+        });
+
+        const raw = await res.text();
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch {
+            throw new Error('El servidor no respondió correctamente. Verifique Apache, PHP y la ruta public/index.php');
+        }
+
+        if (data.ok) {
+            BerilionUI.alert('Acceso concedido', 'success');
+            location.href = 'index.php?page=app';
+        } else {
+            BerilionUI.alert(data.error || 'Error de acceso', 'danger');
+        }
+    } catch (err) {
+        BerilionUI.alert(err.message || 'No se pudo conectar con el servidor', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = textoOriginal;
     }
 });
 </script>

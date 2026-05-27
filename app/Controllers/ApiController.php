@@ -228,6 +228,16 @@ class ApiController extends Controller
             if ($puertos < 1) {
                 $this->json(['ok' => false, 'error' => 'Indique puertos usados válidos.'], 422);
             }
+            $padre = Equipo::find($padreId, $sedeId);
+            if (!$padre) {
+                $this->json(['ok' => false, 'error' => 'Equipo padre no encontrado.'], 422);
+            }
+            $tipoPadre = TipoEquipo::findByCodigo($padre['tipo_codigo']);
+            $max = (int) ($tipoPadre['puertos_max'] ?? 0);
+            $ocupados = Equipo::puertosOcupadosPadre($sedeId, $padreId, $id ?: null);
+            if ($puertos > max(0, $max - $ocupados)) {
+                $this->json(['ok' => false, 'error' => 'Puertos insuficientes en el equipo padre.'], 422);
+            }
             $modelo = 'N/A';
         } else {
             if ($modelo === '') {
