@@ -18,7 +18,9 @@
         'Switch Puesto (5p)': 'https://img.icons8.com/fluency/96/switch.png',
         'Switch Puesto (8p)': 'https://img.icons8.com/fluency/96/switch.png',
         Servidor: 'https://img.icons8.com/fluency/96/server.png',
-        DVR: 'https://img.icons8.com/fluency/96/video-recorder.png',
+        DVR: 'https://img.icons8.com/?size=100&id=CxBUJc7tDGwl&format=png&color=000000',
+        'DVR / NVR': 'https://img.icons8.com/?size=100&id=CxBUJc7tDGwl&format=png&color=000000',
+        'DVR/NVR': 'https://img.icons8.com/?size=100&id=CxBUJc7tDGwl&format=png&color=000000',
         Interbancario: 'https://img.icons8.com/fluency/96/bank.png',
         'Biométrico': 'https://img.icons8.com/fluency/96/fingerprint.png',
         Impresora: 'https://img.icons8.com/fluency/96/printer.png',
@@ -26,6 +28,32 @@
     };
 
     const capaLabel = { acceso: 'Acceso', distribucion: 'Distribución', nucleo: 'Núcleo' };
+    const padresWifiPermitidos = ['Router', 'Deco', 'Repetidor'];
+
+    const ICON_DVR = 'https://img.icons8.com/?size=100&id=CxBUJc7tDGwl&format=png&color=000000';
+    const ICON_DVR_OSCURO = 'https://img.icons8.com/?size=100&id=CxBUJc7tDGwl&format=png&color=FFFFFF';
+
+    function iconForTipoCodigo(tipoCodigo, esOscuro = false) {
+        const raw = String(tipoCodigo ?? '').trim();
+        const upper = raw.toUpperCase();
+        if (upper.includes('DVR') || upper.includes('NVR')) {
+            return esOscuro ? ICON_DVR_OSCURO : ICON_DVR;
+        }
+        if (raw && iconRepo[raw]) return iconRepo[raw];
+        return 'https://img.icons8.com/fluency/96/network.png';
+    }
+
+    function fontDiagrama(esOscuro, size = 12) {
+        return {
+            color: esOscuro ? '#f8fafc' : '#0f172a',
+            size,
+            multi: true,
+            align: 'center',
+            background: esOscuro ? 'rgba(30,41,59,0.94)' : 'rgba(255,255,255,0.96)',
+            strokeWidth: 3,
+            strokeColor: esOscuro ? 'rgba(30,41,59,0.94)' : '#ffffff'
+        };
+    }
 
     function tipoByCodigo(c) {
         return tiposEquipo.find(t => t.codigo === c);
@@ -41,6 +69,14 @@
 
     function tipoUsaPuertosPadre(t) {
         return t && parseInt(t.requiere_puertos, 10) === 1;
+    }
+
+    function esInalambrico() {
+        return (document.getElementById('medioEnlace')?.value || 'cableado') === 'inalambrico';
+    }
+
+    function padreWifiValido(equipo) {
+        return equipo && padresWifiPermitidos.includes(equipo.tipo_codigo);
     }
 
     function slug(texto) {
@@ -318,6 +354,10 @@
     function bindEvents() {
         document.getElementById('nodeType').onchange = onTipoChange;
         document.getElementById('nodeParent').onchange = actualizarPuertos;
+        document.getElementById('medioEnlace').onchange = () => {
+            actualizarPadres();
+            onTipoChange();
+        };
         document.getElementById('btnAgregar').onclick = guardarEquipo;
         document.getElementById('btnGenerarDiagrama').onclick = generarDiagrama;
         document.getElementById('btnPdf').onclick = prepararImpresionPdf;
@@ -330,6 +370,8 @@
         document.getElementById('btnGuardarDatosSede').onclick = () => guardarDatosSede();
         document.getElementById('btnGuardarRifRapido').onclick = () => guardarDatosSede(true);
         document.getElementById('btnAbrirPanelSede').onclick = () => openSidebar('panel-sede-activa');
+        document.getElementById('btnAddPisoSedeActiva').onclick = () => addPisoBlock('pisosSedeActiva');
+        document.getElementById('btnGuardarZonasSede').onclick = () => guardarZonasSedeActiva();
         document.getElementById('btnAgregarModeloCatalogo').onclick = agregarModeloCatalogo;
         document.getElementById('btnAgregarTipoEquipo').onclick = agregarTipoEquipo;
         document.getElementById('nuevoTipoSwitch').onchange = () => {
@@ -394,6 +436,7 @@
         zonas = r.zonas || [];
         equipos = r.equipos || [];
         actualizarVistaDatosSede();
+        renderEditorZonasSedeActiva();
         actualizarSelectZonas();
         actualizarTabla();
         actualizarPadres();
@@ -501,13 +544,18 @@
         const codigo = document.getElementById('nodeType').value;
         const t = tipoByCodigo(codigo);
         document.getElementById('groupIp').style.display = t && parseInt(t.requiere_ip, 10) ? 'flex' : 'none';
-        document.getElementById('groupPorts').style.display = tipoUsaPuertosPadre(t) ? 'flex' : 'none';
+        const requierePuestos = tipoUsaPuertosPadre(t);
+        const inal = esInalambrico();
+        document.getElementById('groupPorts').style.display = requierePuestos ? 'flex' : 'none';
+        document.getElementById('labelPorts').textContent = inal ? 'Puestos inalámbricos' : 'Puertos usados';
+        document.getElementById('nodePorts').style.display = (requierePuestos && !inal) ? 'block' : 'none';
+        document.getElementById('nodeWifiCount').style.display = (requierePuestos && inal) ? 'block' : 'none';
         document.getElementById('groupSpeed').style.display = requiereVelocidad(t) ? 'flex' : 'none';
         document.getElementById('groupGeneration').style.display = codigo === 'Servidor' ? 'flex' : 'none';
         document.getElementById('labelModel').textContent = codigo === 'Servidor' ? 'Procesador' : 'Modelo';
         document.getElementById('groupModel').style.display = tipoUsaPuertosPadre(t) ? 'none' : 'flex';
         actualizarSelectModelos();
-        if (tipoUsaPuertosPadre(t)) actualizarPuertos();
+        if (requierePuestos && !inal) actualizarPuertos();
     }
 
     function actualizarSelectModelos(modeloSeleccionado = '') {
@@ -597,7 +645,7 @@
 
     async function actualizarPuertos() {
         const t = tipoByCodigo(document.getElementById('nodeType').value);
-        if (!sedeActual || !tipoUsaPuertosPadre(t)) return;
+        if (!sedeActual || !tipoUsaPuertosPadre(t) || esInalambrico()) return;
         const padreId = document.getElementById('nodeParent').value;
         const sel = document.getElementById('nodePorts');
         if (!padreId) {
@@ -622,7 +670,14 @@
     function actualizarPadres() {
         const sel = document.getElementById('nodeParent');
         sel.innerHTML = '<option value="">Nodo principal</option>';
-        equipos.filter(e => !tipoUsaPuertosPadre(tipoByCodigo(e.tipo_codigo)) && String(e.id) !== String(editId)).forEach(e => {
+        const inal = esInalambrico();
+        equipos
+            .filter(e => String(e.id) !== String(editId))
+            .filter(e => {
+                if (inal) return padreWifiValido(e);
+                return !tipoUsaPuertosPadre(tipoByCodigo(e.tipo_codigo));
+            })
+            .forEach(e => {
             const t = tipoByCodigo(e.tipo_codigo);
             const lbl = t ? t.etiqueta : e.tipo_codigo;
             sel.innerHTML += `<option value="${e.id}">${lbl} (${e.modelo})</option>`;
@@ -661,6 +716,12 @@
                 ? '<span class="badge badge-wifi">Wi-Fi</span>'
                 : '<span class="badge badge-cable">Cable</span>';
             let detalle = e.modelo;
+            if (tipoUsaPuertosPadre(t) && (e.puertos_usados || 0) > 0) {
+                const txt = e.medio_enlace === 'inalambrico'
+                    ? `${e.puertos_usados} puesto(s) Wi-Fi`
+                    : `${e.puertos_usados} puerto(s) usados`;
+                detalle += `<br><small>${txt}</small>`;
+            }
             if (e.ip) detalle += `<br><small>${e.ip}</small>`;
             let padre = 'Raíz';
             if (e.padre_id) {
@@ -687,6 +748,7 @@
         if (!sedeActual) return BerilionUI.alert('Seleccione una sede', 'warning');
         const codigo = document.getElementById('nodeType').value;
         const t = tipoByCodigo(codigo);
+        const inal = esInalambrico();
         const payload = {
             id: editId || 0,
             sede_id: sedeActual.id,
@@ -701,6 +763,32 @@
             puertos_usados: document.getElementById('nodePorts').value,
             switch_capa: parseInt(t.es_switch, 10) ? capaFromTipo(codigo) : null
         };
+
+        if (inal) {
+            if (!payload.padre_id) {
+                return BerilionUI.alert('En inalámbrico debe seleccionar padre (Router / Deco / Repetidor)', 'warning');
+            }
+            if (tipoUsaPuertosPadre(t)) {
+                payload.puertos_usados = document.getElementById('nodeWifiCount').value;
+                const nWifi = parseInt(payload.puertos_usados, 10);
+                if (!Number.isInteger(nWifi) || nWifi < 1) {
+                    return BerilionUI.alert('Indique cantidad válida de puestos inalámbricos', 'warning');
+                }
+            } else {
+                payload.puertos_usados = '';
+            }
+        } else if (tipoUsaPuertosPadre(t)) {
+            const nPuertos = parseInt(payload.puertos_usados, 10);
+            if (!Number.isInteger(nPuertos) || nPuertos < 1) {
+                return BerilionUI.alert('Seleccione puertos usados válidos', 'warning');
+            }
+        }
+
+        // Tipos que consumen puertos en cableado usan modelo N/A
+        if (tipoUsaPuertosPadre(t)) {
+            payload.modelo = 'N/A';
+        }
+
         if (!tipoUsaPuertosPadre(t) && !payload.modelo) {
             return BerilionUI.alert('Seleccione un modelo del catálogo', 'warning');
         }
@@ -733,7 +821,11 @@
         onTipoChange();
         actualizarSelectModelos(e.modelo || '');
         if (tipoUsaPuertosPadre(tipoByCodigo(e.tipo_codigo))) {
-            document.getElementById('nodePorts').value = e.puertos_usados;
+            if ((e.medio_enlace || 'cableado') === 'inalambrico') {
+                document.getElementById('nodeWifiCount').value = e.puertos_usados || 1;
+            } else {
+                document.getElementById('nodePorts').value = e.puertos_usados;
+            }
         }
         document.getElementById('formActionsContainer').innerHTML = `
             <button type="button" class="btn btn-warning" style="height:40px" id="btnSaveEdit">Guardar</button>
@@ -765,7 +857,7 @@
         document.getElementById('nuevaSedeRif').value = '';
         document.getElementById('nuevaSedeCable').value = 'No especificado';
         document.getElementById('pisosNuevaSede').innerHTML = '';
-        addPisoBlock();
+        addPisoBlock('pisosNuevaSede');
     }
 
     function prepararFormularioSede() {
@@ -773,17 +865,60 @@
         activarPanelSidebar('panel-nueva-sede');
     }
 
-    function addAreaRow(areasContainer) {
+    function renderEditorZonasSedeActiva() {
+        const cont = document.getElementById('pisosSedeActiva');
+        if (!cont) return;
+        cont.innerHTML = '';
+        if (!sedeActual) return;
+        const pisos = zonas.filter(z => z.tipo === 'piso').sort((a, b) => (a.orden || 0) - (b.orden || 0));
+        pisos.forEach(p => {
+            const areas = zonas
+                .filter(z => z.tipo === 'area' && String(z.piso_id) === String(p.id))
+                .sort((a, b) => (a.orden || 0) - (b.orden || 0))
+                .map(a => a.nombre);
+            addPisoBlock('pisosSedeActiva', p.nombre, areas);
+        });
+        if (!pisos.length) {
+            addPisoBlock('pisosSedeActiva');
+        }
+    }
+
+    async function guardarZonasSedeActiva() {
+        if (!sedeActual) return BerilionUI.alert('Seleccione una sede', 'warning');
+        const pisosPayload = [];
+        document.querySelectorAll('#pisosSedeActiva .piso-block').forEach(block => {
+            const nombrePiso = block.querySelector('.piso-nombre').value.trim();
+            if (!nombrePiso) return;
+            const areas = [];
+            block.querySelectorAll('.area-item-row .area-nombre').forEach(inp => {
+                const n = inp.value.trim();
+                if (n) areas.push({ nombre: n });
+            });
+            pisosPayload.push({ nombre: nombrePiso, areas });
+        });
+        const r = await apiPost('zonas-actualizar', { sede_id: sedeActual.id, pisos: pisosPayload });
+        if (!r.ok) return BerilionUI.alert(r.error || 'No se pudieron guardar pisos/áreas', 'danger');
+        zonas = r.zonas || [];
+        equipos = r.equipos || equipos;
+        actualizarSelectZonas();
+        actualizarTabla();
+        actualizarPadres();
+        renderEditorZonasSedeActiva();
+        BerilionUI.alert('Pisos y áreas actualizados', 'success');
+    }
+
+    function addAreaRow(areasContainer, nombreInicial = '') {
         const row = document.createElement('div');
         row.className = 'area-item-row';
         row.innerHTML = `
             <input type="text" class="area-nombre" placeholder="Nombre del área (ej: Farmacia, Bodega)">
             <button type="button" class="btn btn-danger btn-sm">×</button>`;
+        row.querySelector('input').value = nombreInicial;
         row.querySelector('button').onclick = () => row.remove();
         areasContainer.appendChild(row);
     }
 
-    function addPisoBlock() {
+    function addPisoBlock(containerId = 'pisosNuevaSede', nombreInicial = '', areasIniciales = []) {
         const block = document.createElement('div');
         block.className = 'piso-block';
         block.innerHTML = `
@@ -793,9 +928,12 @@
             </div>
             <div class="areas-en-piso"></div>
             <button type="button" class="btn btn-help btn-sm btn-add-area">+ Área en este piso</button>`;
+        block.querySelector('.piso-nombre').value = nombreInicial;
         block.querySelector('.piso-block-header button').onclick = () => block.remove();
         block.querySelector('.btn-add-area').onclick = () => addAreaRow(block.querySelector('.areas-en-piso'));
-        document.getElementById('pisosNuevaSede').appendChild(block);
+        const areasBox = block.querySelector('.areas-en-piso');
+        (areasIniciales || []).forEach(a => addAreaRow(areasBox, a));
+        document.getElementById(containerId).appendChild(block);
     }
 
     async function guardarNuevaSede() {
@@ -830,14 +968,49 @@
         BerilionUI.alert('Sede registrada correctamente', 'success');
     }
 
-    function edgeStyle(medio, esOscuro, highlight) {
+    function edgeStyle(medio, esOscuro, highlight, smoothType = 'straight', enAnclas = false) {
         const cable = medio !== 'inalambrico';
+        const smooth = smoothType === 'none'
+            ? false
+            : {
+                enabled: true,
+                type: smoothType,
+                roundness: smoothType === 'discrete' ? 0.2 : 0.02,
+                forceDirection: smoothType === 'vertical' ? 'vertical' : undefined
+            };
+        const vertical = smoothType === 'vertical';
+        const offset = enAnclas
+            ? { from: 0, to: 0 }
+            : (vertical ? { from: 10, to: 18 } : { from: 8, to: 12 });
         return {
-            arrows: 'to',
+            arrows: { to: { enabled: true, scaleFactor: 0.4, type: 'arrow' } },
             color: { color: esOscuro ? '#64748b' : '#94a3b8', highlight: highlight || '#1e3a8a' },
-            width: cable ? 2.5 : 2,
-            dashes: cable ? false : [8, 6]
+            width: cable ? 1.2 : 1,
+            dashes: cable ? false : [8, 6],
+            smooth,
+            endPointOffset: offset
         };
+    }
+
+    function anchorInvisible(id, x, y) {
+        return {
+            id,
+            x,
+            y,
+            size: 0.01,
+            shape: 'dot',
+            color: { background: 'rgba(0,0,0,0)', border: 'rgba(0,0,0,0)' },
+            borderWidth: 0,
+            margin: 0,
+            fixed: true,
+            physics: false,
+            label: '',
+            font: { size: 0, color: 'rgba(0,0,0,0)' }
+        };
+    }
+
+    function margenNodoDiagrama(extraBottom = 0) {
+        return { top: 10, right: 12, bottom: 18 + extraBottom, left: 12 };
     }
 
     function labelEquipoCorto(equipo) {
@@ -855,6 +1028,117 @@
         return etiqueta;
     }
 
+    function colorPaletaZona(colorHex, esOscuro) {
+        return colorHex || (esOscuro ? '#3b82f6' : '#1e3a8a');
+    }
+
+    function anchoTitulo(texto, min = 90, max = 220) {
+        const plain = String(texto).replace(/<[^>]+>/g, '');
+        return Math.min(max, Math.max(min, plain.length * 9 + 28));
+    }
+
+    function agregarLineaHorizontal(nodes, edges, id, x, y, ancho, color) {
+        const leftId = `${id}_l`;
+        const rightId = `${id}_r`;
+        const half = ancho / 2;
+        nodes.push(anchorInvisible(leftId, x - half, y), anchorInvisible(rightId, x + half, y));
+        edges.push({
+            id: `${id}_edge`,
+            from: leftId,
+            to: rightId,
+            width: 2,
+            color: { color, highlight: color, hover: color },
+            arrows: { to: { enabled: false }, from: { enabled: false } },
+            smooth: false,
+            physics: false
+        });
+    }
+
+    function nodoTituloZona(nodes, edges, opts, esOscuro) {
+        const color = colorPaletaZona(opts.color, esOscuro);
+        const ancho = anchoTitulo(opts.label, opts.anchoMin ?? 90, opts.anchoMax ?? 200);
+        const yLinea = opts.y + (opts.lineOffset ?? 16);
+        const yOut = yLinea + (opts.gapBelow ?? 14);
+        const yIn = opts.y - (opts.gapAbove ?? 12);
+        nodes.push({
+            id: opts.id,
+            label: opts.label,
+            shape: 'text',
+            font: { ...fontDiagrama(esOscuro, opts.fontSize ?? 13), bold: true },
+            color: {
+                background: 'rgba(0,0,0,0)',
+                border: 'rgba(0,0,0,0)',
+                highlight: { background: 'rgba(0,0,0,0)', border: 'rgba(0,0,0,0)' }
+            },
+            borderWidth: 0,
+            margin: opts.margin ?? { top: 8, right: 10, bottom: 8, left: 10 },
+            x: opts.x,
+            y: opts.y,
+            fixed: true
+        });
+        agregarLineaHorizontal(nodes, edges, `${opts.id}_ln`, opts.x, yLinea, ancho, color);
+        nodes.push(
+            anchorInvisible(`${opts.id}_in`, opts.x, yIn),
+            anchorInvisible(`${opts.id}_out`, opts.x, yOut)
+        );
+        return { outId: `${opts.id}_out`, inId: `${opts.id}_in`, yOut, yLinea };
+    }
+
+    function agregarSeparadorVertical(nodes, edges, id, x, yTop, alto, esOscuro) {
+        const color = esOscuro ? '#94a3b8' : '#0f172a';
+        const topId = `${id}_top`;
+        const botId = `${id}_bot`;
+        const yBottom = yTop + alto;
+        nodes.push(anchorInvisible(topId, x, yTop), anchorInvisible(botId, x, yBottom));
+        edges.push({
+            id,
+            from: topId,
+            to: botId,
+            width: 1,
+            color: { color, highlight: color, hover: color },
+            arrows: { to: { enabled: false }, from: { enabled: false } },
+            smooth: false,
+            physics: false
+        });
+    }
+
+    function labelEquipoNodo(e, t) {
+        const etiqueta = t ? t.etiqueta : e.tipo_codigo;
+        let label = `<b>${etiqueta}</b>`;
+        if (parseInt(t?.es_switch, 10)) {
+            label = `<b>[${capaLabel[e.switch_capa] || 'Acceso'}]</b>\n${etiqueta}`;
+        }
+        if (tipoUsaPuertosPadre(t)) {
+            const pref = e.medio_enlace === 'inalambrico' ? 'WiFi' : 'P';
+            return `<b>${etiqueta}</b>\n${pref}:${e.puertos_usados || 1}`;
+        }
+        if (e.ip) return `${label}\n${e.ip}`;
+        if (e.modelo && e.modelo !== 'N/A') return `${label}\n${e.modelo}`;
+        return label;
+    }
+
+    function agregarEquipoNodo(nodes, edges, e, t, x, y, parentId, esOscuro, smoothEnlace = 'straight') {
+        const eid = `eq_${e.id}`;
+        nodes.push({
+            id: eid,
+            label: labelEquipoNodo(e, t),
+            shape: 'image',
+            image: iconForTipoCodigo(e.tipo_codigo, esOscuro),
+            size: 30,
+            margin: margenNodoDiagrama(8),
+            font: { ...fontDiagrama(esOscuro, 10), vadjust: 36 },
+            x,
+            y,
+            fixed: true
+        });
+        const fromId = e.padre_id ? `eq_${e.padre_id}` : parentId;
+        edges.push({
+            from: fromId,
+            to: eid,
+            ...edgeStyle(e.medio_enlace, esOscuro, null, smoothEnlace, String(fromId).endsWith('_out'))
+        });
+    }
+
     function generarDiagrama() {
         if (!sedeActual || !equipos.length) {
             return BerilionUI.alert('Agregue equipos para generar el diagrama', 'warning');
@@ -864,128 +1148,165 @@
         const edges = [];
         const rootId = 'sede_root';
 
+        const rootOutId = `${rootId}_out`;
         nodes.push({
             id: rootId,
             label: `<b>${sedeActual.nombre}</b>\n<i>${sedeActual.categoria_cable}</i>`,
             shape: 'image',
             image: 'https://img.icons8.com/fluency/96/company.png',
             size: 48,
-            font: { color: esOscuro ? '#60a5fa' : '#1e3a8a', size: 13, multi: true, bold: true }
+            margin: margenNodoDiagrama(24),
+            font: { ...fontDiagrama(esOscuro, 12), vadjust: 58 },
+            x: 0,
+            y: 0,
+            fixed: true
+        });
+        nodes.push(anchorInvisible(rootOutId, 0, 95));
+
+        const zonaById = {};
+        zonas.forEach(z => { zonaById[String(z.id)] = z; });
+        let pisos = zonas.filter(z => z.tipo === 'piso').sort((a, b) => (a.orden || 0) - (b.orden || 0));
+        if (!pisos.length) {
+            pisos = [{ id: 'virtual', nombre: 'General', tipo: 'piso', color_hex: '#3b82f6' }];
+        }
+
+        const areaEquipos = {};
+        const areaFloor = {};
+        const areaMeta = {};
+
+        pisos.forEach(p => {
+            const pid = String(p.id);
+            areaEquipos[`${pid}::general`] = [];
+            areaFloor[`${pid}::general`] = pid;
+            areaMeta[`${pid}::general`] = {
+                nombre: 'General',
+                color_hex: p.color_hex || '#3b82f6',
+                esGeneral: true
+            };
         });
 
-        const zonaNodeId = {};
-        const idsNecesarios = new Set();
-        const equiposPorZona = {};
+        zonas.filter(z => z.tipo === 'area').forEach(a => {
+            const pid = String(a.piso_id || pisos[0].id);
+            const key = `area::${a.id}`;
+            areaEquipos[key] = [];
+            areaFloor[key] = pid;
+            areaMeta[key] = {
+                nombre: a.nombre,
+                color_hex: a.color_hex || '#3b82f6',
+                esGeneral: false
+            };
+        });
 
         equipos.forEach(e => {
-            if (!e.zona_id) return;
-            const zid = String(e.zona_id);
-            if (!equiposPorZona[zid]) equiposPorZona[zid] = [];
-            equiposPorZona[zid].push(e);
-        });
-
-        equipos.forEach(e => {
-            if (!e.zona_id) return;
-            idsNecesarios.add(String(e.zona_id));
-            const z = zonas.find(x => x.id == e.zona_id);
-            if (z && z.tipo === 'area' && z.piso_id) {
-                idsNecesarios.add(String(z.piso_id));
+            let key = `${pisos[0].id}::general`;
+            if (e.zona_id) {
+                const z = zonaById[String(e.zona_id)];
+                if (z?.tipo === 'area') key = `area::${z.id}`;
+                else if (z?.tipo === 'piso') key = `${z.id}::general`;
             }
-        });
-
-        const agregarNodoZona = (z) => {
-            const nid = 'zona_' + z.id;
-            if (zonaNodeId[z.id]) return;
-            zonaNodeId[z.id] = nid;
-            const esArea = z.tipo === 'area';
-            const equiposEnZona = (equiposPorZona[String(z.id)] || []);
-            const detalleArea = esArea && equiposEnZona.length
-                ? `\n\n${equiposEnZona.map(eq => `- ${labelEquipoCorto(eq)}`).join('\n')}`
-                : '';
-            nodes.push({
-                id: nid,
-                label: esArea
-                    ? `<b>ÁREA</b>\n${z.nombre}\n<i>${z.piso_nombre || ''}</i>${detalleArea}`
-                    : `<b>PISO</b>\n${z.nombre}`,
-                shape: 'box',
-                color: {
-                    background: esOscuro ? '#1e293b' : '#f8fafc',
-                    border: z.color_hex || '#3b82f6',
-                    highlight: { border: z.color_hex }
-                },
-                borderWidth: esArea ? 2 : 3,
-                font: { color: esOscuro ? '#f8fafc' : '#0f172a', size: 12, multi: true },
-                margin: 12
-            });
-        };
-
-        idsNecesarios.forEach(zid => {
-            const z = zonas.find(x => x.id == zid);
-            if (!z) return;
-            agregarNodoZona(z);
-            if (z.tipo === 'piso') {
-                edges.push({
-                    from: rootId,
-                    to: zonaNodeId[z.id],
-                    ...edgeStyle('cableado', esOscuro, z.color_hex),
-                    width: 2
-                });
+            if (!areaEquipos[key]) {
+                areaEquipos[key] = [];
+                areaFloor[key] = String(pisos[0].id);
+                areaMeta[key] = { nombre: 'General', color_hex: '#3b82f6', esGeneral: true };
             }
+            areaEquipos[key].push(e);
         });
 
-        idsNecesarios.forEach(zid => {
-            const z = zonas.find(x => x.id == zid);
-            if (!z || z.tipo !== 'area' || !z.piso_id) return;
-            const padreNid = zonaNodeId[z.piso_id];
-            if (!padreNid) return;
+        const floorGapX = 920;
+        const colGapX = 210;
+        const yPiso = 195;
+        const yAreas = 430;
+        const yEquipos = 545;
+        const eqGapY = 92;
+
+        pisos.forEach((p, floorIdx) => {
+            const pid = String(p.id);
+            const floorX = (floorIdx - (pisos.length - 1) / 2) * floorGapX;
+            const pNodeId = `piso_${pid}`;
+            const colorPiso = p.color_hex || '#3b82f6';
+
+            const pisoTitulo = nodoTituloZona(nodes, edges, {
+                id: pNodeId,
+                label: `<b>${p.nombre}</b>`,
+                x: floorX,
+                y: yPiso,
+                color: colorPiso,
+                fontSize: 14,
+                anchoMin: 120,
+                anchoMax: 240,
+                lineOffset: 18,
+                gapBelow: 16,
+                gapAbove: 12
+            }, esOscuro);
             edges.push({
-                from: padreNid,
-                to: zonaNodeId[z.id],
-                ...edgeStyle('cableado', esOscuro, z.color_hex),
-                width: 2
-            });
-        });
-
-        equipos.forEach(e => {
-            const t = tipoByCodigo(e.tipo_codigo);
-            const etiqueta = t ? t.etiqueta : e.tipo_codigo;
-            let label = `<b>${etiqueta}</b>`;
-            if (parseInt(t?.es_switch, 10)) {
-                label = `<b>[${capaLabel[e.switch_capa] || 'Acceso'}]</b>\n${etiqueta}`;
-            }
-            if (e.ip) label += `\n${e.ip}`;
-            else if (e.modelo && e.modelo !== 'N/A') label += `\n${e.modelo}`;
-            if (tipoUsaPuertosPadre(t)) label = `<b>${etiqueta}</b>\nP:${e.puertos_usados}`;
-
-            nodes.push({
-                id: 'eq_' + e.id,
-                label,
-                shape: 'image',
-                image: iconRepo[e.tipo_codigo] || 'https://img.icons8.com/fluency/96/network.png',
-                size: 32,
-                font: { color: esOscuro ? '#f8fafc' : '#0f172a', size: 11, multi: true }
+                from: rootOutId,
+                to: pisoTitulo.inId,
+                ...edgeStyle('cableado', esOscuro, colorPiso, 'vertical', true),
+                width: 1.2
             });
 
-            const eid = 'eq_' + e.id;
-            if (e.padre_id) {
-                edges.push({
-                    from: 'eq_' + e.padre_id,
-                    to: eid,
-                    ...edgeStyle(e.medio_enlace, esOscuro)
-                });
-            } else if (e.zona_id && zonaNodeId[e.zona_id]) {
-                edges.push({
-                    from: zonaNodeId[e.zona_id],
-                    to: eid,
-                    ...edgeStyle(e.medio_enlace, esOscuro)
-                });
-            } else {
-                edges.push({
-                    from: rootId,
-                    to: eid,
-                    ...edgeStyle(e.medio_enlace, esOscuro)
+            const keys = Object.keys(areaFloor).filter(k => areaFloor[k] === pid);
+            const generalKey = keys.find(k => areaMeta[k].esGeneral);
+            const areaKeys = keys
+                .filter(k => !areaMeta[k].esGeneral)
+                .sort((a, b) => String(areaMeta[a].nombre).localeCompare(String(areaMeta[b].nombre), 'es'));
+
+            const colMeta = [];
+            areaKeys.forEach((k, idx) => {
+                const cx = floorX + (idx - (areaKeys.length - 1) / 2) * colGapX;
+                colMeta.push({ key: k, x: cx, headerId: `hdr_area_${pid}_${idx}`, esGeneral: false });
+            });
+
+            const spineId = pisoTitulo.outId;
+            if (generalKey) {
+                (areaEquipos[generalKey] || []).forEach((e, i) => {
+                    agregarEquipoNodo(
+                        nodes, edges, e, tipoByCodigo(e.tipo_codigo),
+                        floorX, yEquipos + i * eqGapY, spineId, esOscuro, 'vertical'
+                    );
                 });
             }
+
+            colMeta.filter(c => !c.esGeneral).forEach(c => {
+                const areaTitulo = nodoTituloZona(nodes, edges, {
+                    id: c.headerId,
+                    label: `<b>${areaMeta[c.key].nombre}</b>`,
+                    x: c.x,
+                    y: yAreas,
+                    color: areaMeta[c.key].color_hex,
+                    fontSize: 12,
+                    anchoMin: 90,
+                    anchoMax: 180,
+                    lineOffset: 15,
+                    gapBelow: 14,
+                    gapAbove: 10
+                }, esOscuro);
+                edges.push({
+                    from: spineId,
+                    to: areaTitulo.inId,
+                    ...edgeStyle('cableado', esOscuro, areaMeta[c.key].color_hex, 'discrete', true),
+                    width: 1
+                });
+                c.conexionId = areaTitulo.outId;
+            });
+
+            const areaCols = colMeta.filter(c => !c.esGeneral);
+            const maxEq = Math.max(1, ...colMeta.map(c => (areaEquipos[c.key] || []).length));
+            const sepAlto = 80 + maxEq * eqGapY;
+            for (let i = 0; i < areaCols.length - 1; i++) {
+                const sepX = (areaCols[i].x + areaCols[i + 1].x) / 2;
+                agregarSeparadorVertical(nodes, edges, `sep_${pid}_${i}`, sepX, yAreas + 32, sepAlto, esOscuro);
+            }
+
+            areaCols.forEach(c => {
+                const padreArea = c.conexionId || `${c.headerId}_out`;
+                (areaEquipos[c.key] || []).forEach((e, i) => {
+                    agregarEquipoNodo(
+                        nodes, edges, e, tipoByCodigo(e.tipo_codigo),
+                        c.x, yEquipos + i * eqGapY, padreArea, esOscuro, 'vertical'
+                    );
+                });
+            });
         });
 
         document.getElementById('diagramSection').style.display = 'block';
@@ -995,10 +1316,15 @@
             nodes: new vis.DataSet(nodes),
             edges: new vis.DataSet(edges)
         }, {
-            nodes: { borderWidth: 0, shadow: true },
-            edges: { smooth: { type: 'cubicBezier', forceDirection: 'vertical', roundness: 0.35 } },
-            layout: { hierarchical: { direction: 'UD', sortMethod: 'directed', nodeSpacing: 130, treeSpacing: 180 } },
-            physics: { hierarchicalRepulsion: { nodeDistance: 150 } }
+            nodes: { borderWidth: 0, shadow: false, margin: 10 },
+            edges: {
+                smooth: { enabled: true, type: 'straight', roundness: 0 },
+                color: { color: esOscuro ? '#64748b' : '#94a3b8' },
+                font: { background: esOscuro ? '#1e293b' : '#ffffff' }
+            },
+            interaction: { hover: true, dragNodes: true, zoomView: true },
+            layout: { improvedLayout: false },
+            physics: false
         });
         BerilionUI.alert('Diagrama generado', 'success');
     }

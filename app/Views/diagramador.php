@@ -105,6 +105,15 @@
                 <div class="sidebar-footer-actions">
                     <button type="button" class="btn btn-primary" id="btnGuardarDatosSede">Guardar datos de sede</button>
                 </div>
+
+                <hr class="divider" style="margin:18px 0;">
+                <p class="sidebar-section-title">Pisos y áreas</p>
+                <span class="field-hint" style="display:block;margin-bottom:10px;">Edite la estructura de la sede. Las áreas deben pertenecer a un piso.</span>
+                <div id="pisosSedeActiva" class="pisos-list"></div>
+                <button type="button" class="btn btn-help btn-sm" id="btnAddPisoSedeActiva" style="margin-bottom:12px;">+ Agregar piso</button>
+                <div class="sidebar-footer-actions" style="margin-top:8px;padding-top:0;border-top:none;">
+                    <button type="button" class="btn btn-primary" id="btnGuardarZonasSede">Guardar pisos y áreas</button>
+                </div>
             </div>
         </div>
 
@@ -259,8 +268,9 @@
             </select>
         </div>
         <div class="form-group" id="groupPorts" style="display:none;">
-            <label for="nodePorts">Puertos usados</label>
+            <label for="nodePorts" id="labelPorts">Puertos usados</label>
             <select id="nodePorts"></select>
+            <input type="number" id="nodeWifiCount" min="1" value="1" style="display:none;" placeholder="Cantidad de puestos inalámbricos">
         </div>
         <div class="form-group" id="groupSpeed" style="display:none;">
             <label for="nodeSpeed">Velocidad</label>

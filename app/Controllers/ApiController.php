@@ -35,6 +35,9 @@ class ApiController extends Controller
             case 'zonas':
                 $this->zonas();
                 break;
+            case 'zonas-actualizar':
+                $this->zonasActualizar();
+                break;
             case 'equipos':
                 $this->equipos();
                 break;
@@ -177,6 +180,45 @@ class ApiController extends Controller
         $this->json(['ok' => true, 'data' => SedeZona::bySede($id)]);
     }
 
+    private function zonasActualizar(): void
+    {
+        $input = json_decode(file_get_contents('php://input') ?: '{}', true) ?: [];
+        $sedeId = (int) ($input['sede_id'] ?? 0);
+        $pisos = $input['pisos'] ?? [];
+
+        if (!Sede::find($sedeId)) {
+            $this->json(['ok' => false, 'error' => 'Sede no válida'], 404);
+        }
+        if (!is_array($pisos)) {
+            $this->json(['ok' => false, 'error' => 'Formato de pisos inválido'], 422);
+        }
+
+        $pisosValidos = [];
+        foreach ($pisos as $p) {
+            $nombrePiso = trim((string) ($p['nombre'] ?? ''));
+            if ($nombrePiso === '' || mb_strlen($nombrePiso) > 120) {
+                continue;
+            }
+            $areasValidas = [];
+            foreach (($p['areas'] ?? []) as $a) {
+                $nombreArea = trim((string) ($a['nombre'] ?? ''));
+                if ($nombreArea === '' || mb_strlen($nombreArea) > 120) {
+                    continue;
+                }
+                $areasValidas[] = ['nombre' => $nombreArea];
+            }
+            $pisosValidos[] = ['nombre' => $nombrePiso, 'areas' => $areasValidas];
+        }
+
+        SedeZona::replaceFromPisos($sedeId, $pisosValidos);
+
+        $this->json([
+            'ok' => true,
+            'zonas' => SedeZona::bySede($sedeId),
+            'equipos' => Equipo::bySede($sedeId),
+        ]);
+    }
+
     private function equipos(): void
     {
         $id = (int) ($_GET['sede_id'] ?? 0);
@@ -235,8 +277,22 @@ class ApiController extends Controller
             $switchCapa = $capa;
         }
 
+        // Inalámbrico: SOLO puede depender de Router/Deco/Repetidor (y no consume puertos del padre).
+        if ($medio === 'inalambrico') {
+            if (!$padreId) {
+                $this->json(['ok' => false, 'error' => 'Un enlace inalámbrico debe depender de Router, Deco o Repetidor.'], 422);
+            }
+            $padreWifi = Equipo::find($padreId, $sedeId);
+            if (!$padreWifi) {
+                $this->json(['ok' => false, 'error' => 'Equipo padre no encontrado.'], 422);
+            }
+            if (!in_array($padreWifi['tipo_codigo'], ['Router', 'Deco', 'Repetidor'], true)) {
+                $this->json(['ok' => false, 'error' => 'Para enlace inalámbrico, el padre debe ser Router, Deco o Repetidor.'], 422);
+            }
+        }
+
         $puertos = null;
-        if ((int) $tipo['requiere_puertos'] === 1) {
+        if ((int) $tipo['requiere_puertos'] === 1 && $medio === 'cableado') {
             if (!$padreId) {
                 $this->json(['ok' => false, 'error' => 'Este equipo debe depender de un equipo padre.'], 422);
             }
@@ -253,6 +309,13 @@ class ApiController extends Controller
             $ocupados = Equipo::puertosOcupadosPadre($sedeId, $padreId, $id ?: null);
             if ($puertos > max(0, $max - $ocupados)) {
                 $this->json(['ok' => false, 'error' => 'Puertos insuficientes en el equipo padre.'], 422);
+            }
+            $modelo = 'N/A';
+        } elseif ((int) $tipo['requiere_puertos'] === 1 && $medio === 'inalambrico') {
+            // Para estaciones inalámbricas se registra cantidad de puestos (sin consumir puertos físicos).
+            $puertos = (int) ($input['puertos_usados'] ?? 0);
+            if ($puertos < 1) {
+                $this->json(['ok' => false, 'error' => 'Indique cantidad de puestos inalámbricos válida.'], 422);
             }
             $modelo = 'N/A';
         } else {

@@ -451,6 +451,7 @@
             .print-template { display: block !important; margin-bottom: 10px; }
             #network-diagram { width: 100% !important; height: 600px !important; border: none; margin-top: 8px; }
             .btn-pdf, #popover-container { display: none !important; }
+            .diagram-legend { display: none !important; }
         }
 .container.app-visible { display: block; }
 .navbar-individual-container.visible { display: flex; }

@@ -72,6 +72,27 @@ class SedeZona
         }
     }
 
+    /**
+     * Reemplaza pisos/áreas de una sede. Si hay equipos asignados a zonas eliminadas,
+     * su zona_id se vuelve NULL por la FK (ON DELETE SET NULL).
+     *
+     * @param array<int, array{nombre: string, areas?: array<int, array{nombre: string}>}> $pisos
+     */
+    public static function replaceFromPisos(int $sedeId, array $pisos): void
+    {
+        $pdo = Database::connection();
+        $pdo->beginTransaction();
+        try {
+            // Borrado total de zonas de la sede: áreas se eliminan por FK (piso_id ON DELETE CASCADE).
+            $pdo->prepare('DELETE FROM sede_zonas WHERE sede_id = :s')->execute(['s' => $sedeId]);
+            self::createFromPisos($sedeId, $pisos);
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
     public static function find(int $id, int $sedeId): ?array
     {
         $stmt = Database::connection()->prepare(

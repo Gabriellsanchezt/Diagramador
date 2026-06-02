@@ -47,11 +47,18 @@ class Equipo
 
     public static function puertosOcupadosPadre(int $sedeId, int $padreId, ?int $excludeId = null): int
     {
-        $sql = 'SELECT COALESCE(SUM(puertos_usados), 0) FROM equipos
-                WHERE sede_id = :s AND padre_id = :p AND tipo_codigo = \'PC\'';
+        // Cuenta SOLO los hijos que consumen puertos (tipos_equipo.requiere_puertos=1) y que sean cableados.
+        // Inalámbrico no consume puertos físicos del padre.
+        $sql = 'SELECT COALESCE(SUM(e.puertos_usados), 0)
+                FROM equipos e
+                INNER JOIN tipos_equipo t ON t.codigo = e.tipo_codigo
+                WHERE e.sede_id = :s
+                  AND e.padre_id = :p
+                  AND e.medio_enlace = \'cableado\'
+                  AND t.requiere_puertos = 1';
         $params = ['s' => $sedeId, 'p' => $padreId];
         if ($excludeId) {
-            $sql .= ' AND id != :id';
+            $sql .= ' AND e.id != :id';
             $params['id'] = $excludeId;
         }
         $stmt = Database::connection()->prepare($sql);
