@@ -25,11 +25,6 @@ Aplicación MVC (PHP + MySQL) para diagramar la estructura de red por sedes.
 
 **No hace falta configurar `/Berilion/`**: la ruta se detecta sola. Solo si falla, copie `config/app.local.php.example` → `config/app.local.php` y defina `base_url`.
 
-### Credenciales por defecto
-
-| Usuario | Contraseña   |
-|---------|--------------|
-| admin   | berilion23   |
 
 ## Validar instalación
 
